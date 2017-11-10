@@ -15,43 +15,54 @@ func main() {
 
 	logrus.SetLevel(logrus.DebugLevel)
 
-	// nrl2 := NEXRADLevel2File{
-	// 	VolData: []VolumeData{},
-	// 	ElvData: []ElevationData{},
-	// 	RadData: []RadialData{},
-	// 	Moments: make(map[string][]DataMoment),
-	// }
+	// f, _ := os.Open("data/KCRP20170826_235827_V06")
+	f, _ := os.Open("data/KGRK20170827_234611_V06")
+	fi, _ := f.Stat()
 
-	f, _ := os.Open("data/KCRP20170826_235827_V06")
-	// f, _ := os.Open("data/KGRK20170827_234611_V06")
-
+	// read in the volume header record
 	vhr := VolumeHeaderRecord{}
 	binary.Read(f, binary.BigEndian, &vhr)
 
-	// First record consists of Metadata message types 15, 13, 18, 3, 5, and 2
+	// The first LDMRecord is the Metadata Record, consisting of 134 messages of
+	// Metadata message types 15, 13, 18, 3, 5, and 2
+	logrus.Debugf("-------------- LDM Compressed Record (Metadata) ---------------")
 	ldm := LDMRecord{}
 	binary.Read(f, binary.BigEndian, &ldm.Size)
 	decompress(f, ldm.Size)
 
+	// Following the first LDM Metadata Record is a variable number of compressed
+	// records containing 120 radial messages (type 31) plus 0 or more RDA Status
+	// messages (type 2).
 	for true {
-		logrus.Debugf("-------------------- LDM RECORD START --------------------")
-		// preview(f, 32)
 		ldm := LDMRecord{}
 
+		// read in control word (size) of LDM record
 		if err := binary.Read(f, binary.BigEndian, &ldm.Size); err != nil {
 			if err == io.EOF {
-				logrus.Info("completed processing")
-				break
+				logrus.Debug("reached EOF")
+				return
 			}
 			logrus.Panic(err.Error())
 		}
-		logrus.Debugf("decompressing (%12d bytes)", ldm.Size)
-		// preview(f, 16)
+
+		// As the control word contains a negative size under some circumstances,
+		// the absolute value of the control word must be used for determining
+		// the size of the block.
+		if ldm.Size < 0 {
+			ldm.Size = -ldm.Size
+		}
+
+		bytesRead, _ := f.Seek(0, io.SeekCurrent)
+		pctComplete := float64(bytesRead) / float64(fi.Size()) * 100
+		logrus.Debugf("---------------- LDM Compressed Record (%4.1f%%) ----------------", pctComplete)
 
 		msgBuf := decompress(f, ldm.Size)
 
 		for true {
+
+			// 12 byte offset is due to legacy compliance of CTM Header
 			msgBuf.Seek(12, io.SeekCurrent)
+
 			header := MessageHeader{}
 			if err := binary.Read(msgBuf, binary.BigEndian, &header); err != nil {
 				if err != io.EOF {
@@ -59,10 +70,9 @@ func main() {
 				}
 				break
 			}
-			// if header.MessageType != 31 {
-			logrus.Infof("=== Message %d", header.MessageType)
-			// }
-			// spew.Dump(header)
+
+			// logrus.Debugf("== Message %d", header.MessageType)
+
 			switch header.MessageType {
 			case 0:
 				spew.Dump(header)
@@ -71,33 +81,21 @@ func main() {
 				spew.Dump(msg)
 				return
 			case 31:
-				m31 := msg31(msgBuf)
-				if m31.Header.ElevationNumber == 1 {
-					logrus.Infof("\tAzimuth Number: %d", m31.Header.AzimuthNumber)
-					logrus.Infof("\tAzimuth Angle: %f", m31.Header.AzimuthAngle)
-					logrus.Infof("\tAzimuth Res Spacing: %d", m31.Header.AzimuthResolutionSpacing)
-					logrus.Infof("\tElevation Angle: %f", m31.Header.ElevationAngle)
-					logrus.Infof("\tElevation Number: %d", m31.Header.ElevationNumber)
-					logrus.Infof("\tRadialStatus: %d", m31.Header.RadialStatus)
-					logrus.Infof("\tRadial Length: %d", m31.Header.RadialLength)
-					logrus.Infof("\tCut Sector Num: %d", m31.Header.CutSectorNumber)
-				}
-
-				dm := m31.MomentData[3].(DataMoment)
-				spew.Dump(dm)
-				for _, n := range dm.Data {
-					spew.Dump((float32(n) - dm.Offset) / dm.Scale)
-				}
-				return
+				msg31(msgBuf)
+				// logrus.Infof("\tAzimuth Number: %d", m31.Header.AzimuthNumber)
+				// logrus.Infof("\tAzimuth Angle: %f", m31.Header.AzimuthAngle)
+				// logrus.Infof("\tAzimuth Res Spacing: %d", m31.Header.AzimuthResolutionSpacing)
+				// logrus.Infof("\tElevation Angle: %f", m31.Header.ElevationAngle)
+				// logrus.Infof("\tElevation Number: %d", m31.Header.ElevationNumber)
+				// logrus.Infof("\tRadialStatus: %d", m31.Header.RadialStatus)
+				// logrus.Infof("\tRadial Length: %d", m31.Header.RadialLength)
+				// logrus.Infof("\tCut Sector Num: %d", m31.Header.CutSectorNumber)
 			case 2:
-				// spew.Dump(header)
 				m2 := RDAStatusMessage2{}
 				binary.Read(msgBuf, binary.BigEndian, &m2)
-				// spew.Dump(m2)
 				// eat the rest of the record since we know it's 2432 bytes
 				msg := make([]byte, 2432-16-54-12)
 				binary.Read(msgBuf, binary.BigEndian, &msg)
-				// spew.Dump(msg)
 			default:
 				spew.Dump(header)
 				// eat the rest of the record since we know it's 2432 bytes (2416 - header)
@@ -116,7 +114,7 @@ func preview(r io.ReadSeeker, n int) {
 	r.Seek(-int64(n), io.SeekCurrent)
 }
 
-func decompress(f *os.File, size uint32) *bytes.Reader {
+func decompress(f *os.File, size int32) *bytes.Reader {
 	compressedData := make([]byte, size)
 	binary.Read(f, binary.BigEndian, &compressedData)
 	bz2Reader := bzip2.NewReader(bytes.NewReader(compressedData))

@@ -49,7 +49,7 @@ type VolumeHeaderRecord struct {
 // Following the Volume Header Record are variable-length records containing the
 // Archive II data messages. These records are referred to as LDM Compressed Record(s).
 type LDMRecord struct {
-	Size           uint32
+	Size           int32
 	MetaDataRecord []byte
 }
 
