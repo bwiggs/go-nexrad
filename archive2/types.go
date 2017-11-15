@@ -1,11 +1,13 @@
-package main
+package archive2
 
-type NEXRADLevel2File struct {
-	VolData []VolumeData
-	ElvData []ElevationData
-	RadData []RadialData
-	Moments map[string][]DataMoment
-}
+const (
+	RadialStatusStartOfElevationScan   = 0
+	RadialStatusIntermediateRadialData = 1
+	RadialStatusEndOfElevation         = 2
+	RadialStatusBeginningOfVolumeScan  = 3
+	RadialStatusEndOfVolumeScan        = 4
+	RadialStatusStartNewElevation      = 5
+)
 
 // VolumeHeaderRecord for NEXRAD Archive II Data Streams
 //
@@ -220,8 +222,23 @@ type GenericDataMoment struct {
 	Offset float32
 }
 
-// RefData Reflectivity
 type DataMoment struct {
 	GenericDataMoment
 	Data []byte
+}
+
+func (d *DataMoment) RefData() []float32 {
+	convertedData := []float32{}
+	for i := range d.Data {
+		convertedData = append(convertedData, ScaleUint(d.Data[i], d.GenericDataMoment.Offset, d.GenericDataMoment.Scale))
+	}
+	return convertedData
+}
+
+// ScaleUint converts unsigned integer data that can be converted to floating point
+// data using the Scale and Offset fields, i.e., F = (N - OFFSET) / SCALE where
+// N is the integer data value and F is the resulting floating point value. A
+// scale value of 0 indicates floating point moment data for each range gate.
+func ScaleUint(n uint8, offset, scale float32) float32 {
+	return (float32(n) - offset) / scale
 }
