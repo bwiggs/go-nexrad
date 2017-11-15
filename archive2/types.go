@@ -76,8 +76,16 @@ type MessageHeader struct {
 // message will be dependent on the scanning strategy and the type of data
 // associated with that scanning strategy.
 type Message31 struct {
-	Header     Message31Header
-	MomentData []interface{}
+	Header           Message31Header
+	VolumeData       VolumeData
+	ElevationData    ElevationData
+	RadialData       RadialData
+	ReflectivityData DataMoment
+	VelocityData     DataMoment
+	SwData           DataMoment
+	ZdrData          DataMoment
+	PhiData          DataMoment
+	RhoData          DataMoment
 }
 
 // RadialStatus enumerations
@@ -222,15 +230,35 @@ type GenericDataMoment struct {
 	Offset float32
 }
 
+// func (d *GenericDataMoment) DataMomentRange() float32 {
+// 	return d.scale(d.dataMomentRange)
+// }
+
+// func (d *GenericDataMoment) DataMomentRangeSampleInterval() float32 {
+// 	return d.scale(d.dataMomentRangeSampleInterval)
+// }
+
+// func (d *GenericDataMoment) TOVER() float32 {
+// 	return d.scale(d.TOVER)
+// }
+
+// func (d *GenericDataMoment) scale(v float32) float32 {
+// 	return (v - d.Offset) / d.Scale
+// }
+
 type DataMoment struct {
 	GenericDataMoment
 	Data []byte
 }
 
+// RefData for Reflectivity data
+// For all data moment integer values N = 0 indicates received signal is below
+// threshold and N = 1 indicates range folded data. Actual data range is N = 2
+// through 255, or 1023 for data resolution size 8, and 10 bits respectively.
 func (d *DataMoment) RefData() []float32 {
 	convertedData := []float32{}
-	for i := range d.Data {
-		convertedData = append(convertedData, ScaleUint(d.Data[i], d.GenericDataMoment.Offset, d.GenericDataMoment.Scale))
+	for _, v := range d.Data {
+		convertedData = append(convertedData, ScaleUint(v, d.GenericDataMoment.Offset, d.GenericDataMoment.Scale))
 	}
 	return convertedData
 }
@@ -240,5 +268,8 @@ func (d *DataMoment) RefData() []float32 {
 // N is the integer data value and F is the resulting floating point value. A
 // scale value of 0 indicates floating point moment data for each range gate.
 func ScaleUint(n uint8, offset, scale float32) float32 {
+	if scale == 0 {
+		return float32(n)
+	}
 	return (float32(n) - offset) / scale
 }

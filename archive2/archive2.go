@@ -10,7 +10,16 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-func Extract(f io.ReadSeeker) {
+type Archive2 struct {
+	ElevationScans map[int][]*Message31
+}
+
+func Extract(f io.ReadSeeker) *Archive2 {
+
+	ar2 := Archive2{
+		ElevationScans: make(map[int][]*Message31),
+	}
+
 	// read in the volume header record
 	vhr := VolumeHeaderRecord{}
 	binary.Read(f, binary.BigEndian, &vhr)
@@ -32,7 +41,7 @@ func Extract(f io.ReadSeeker) {
 		if err := binary.Read(f, binary.BigEndian, &ldm.Size); err != nil {
 			if err == io.EOF {
 				logrus.Debug("reached EOF")
-				return
+				return &ar2
 			}
 			logrus.Panic(err.Error())
 		}
@@ -69,23 +78,20 @@ func Extract(f io.ReadSeeker) {
 				msg := make([]byte, header.MessageSize)
 				binary.Read(msgBuf, binary.BigEndian, &msg)
 				spew.Dump(msg)
-				return
 			case 31:
-				msg31(msgBuf)
-				// logrus.Infof("\tAzimuth Number: %d", m31.Header.AzimuthNumber)
-				// logrus.Infof("\tAzimuth Angle: %f", m31.Header.AzimuthAngle)
-				// logrus.Infof("\tAzimuth Res Spacing: %d", m31.Header.AzimuthResolutionSpacing)
-				// logrus.Infof("\tElevation Angle: %f", m31.Header.ElevationAngle)
-				// logrus.Infof("\tElevation Number: %d", m31.Header.ElevationNumber)
-				// logrus.Infof("\tRadialStatus: %d", m31.Header.RadialStatus)
-				// logrus.Infof("\tRadial Length: %d", m31.Header.RadialLength)
-				// logrus.Infof("\tCut Sector Num: %d", m31.Header.CutSectorNumber)
+				m31 := msg31(msgBuf)
+				logrus.Debugf("%s (%3d) ɑ=%7.3f elv=%2d status=%d", m31.Header.RadarIdentifier, m31.Header.AzimuthNumber, m31.Header.AzimuthAngle, m31.Header.ElevationNumber, m31.Header.RadialStatus)
+				if m31.Header.ElevationNumber > 1 {
+					return &ar2
+				}
+				ar2.ElevationScans[int(m31.Header.ElevationNumber)] = append(ar2.ElevationScans[int(m31.Header.ElevationNumber)], m31)
 			case 2:
 				m2 := RDAStatusMessage2{}
 				binary.Read(msgBuf, binary.BigEndian, &m2)
 				// eat the rest of the record since we know it's 2432 bytes
 				msg := make([]byte, 2432-16-54-12)
 				binary.Read(msgBuf, binary.BigEndian, &msg)
+				spew.Dump(msg)
 			default:
 				spew.Dump(header)
 				// eat the rest of the record since we know it's 2432 bytes (2416 - header)
@@ -95,6 +101,7 @@ func Extract(f io.ReadSeeker) {
 			}
 		}
 	}
+	return &ar2
 }
 
 func preview(r io.ReadSeeker, n int) {
@@ -118,8 +125,7 @@ func msg31(r *bytes.Reader) *Message31 {
 	binary.Read(r, binary.BigEndian, &m31h)
 
 	m31 := Message31{
-		Header:     m31h,
-		MomentData: []interface{}{},
+		Header: m31h,
 	}
 
 	for i := uint16(0); i < m31h.DataBlockCount; i++ {
@@ -134,17 +140,11 @@ func msg31(r *bytes.Reader) *Message31 {
 		blockName := string(d.DataName[:])
 		switch blockName {
 		case "VOL":
-			d := VolumeData{}
-			binary.Read(r, binary.BigEndian, &d)
-			m31.MomentData = append(m31.MomentData, d)
+			binary.Read(r, binary.BigEndian, &m31.VolumeData)
 		case "ELV":
-			d := ElevationData{}
-			binary.Read(r, binary.BigEndian, &d)
-			m31.MomentData = append(m31.MomentData, d)
+			binary.Read(r, binary.BigEndian, &m31.ElevationData)
 		case "RAD":
-			d := RadialData{}
-			binary.Read(r, binary.BigEndian, &d)
-			m31.MomentData = append(m31.MomentData, d)
+			binary.Read(r, binary.BigEndian, &m31.RadialData)
 		case "REF":
 			fallthrough
 		case "VEL":
@@ -166,15 +166,30 @@ func msg31(r *bytes.Reader) *Message31 {
 			ldm := m.NumberDataMomentGates * uint16(m.DataWordSize) / 8
 			data := make([]uint8, ldm)
 			binary.Read(r, binary.BigEndian, &data)
+
 			d := DataMoment{
 				GenericDataMoment: m,
 				Data:              data,
 			}
-			m31.MomentData = append(m31.MomentData, d)
+
+			switch blockName {
+			case "REF":
+				m31.ReflectivityData = d
+			case "VEL":
+				m31.VelocityData = d
+			case "SW ":
+				m31.SwData = d
+			case "ZDR":
+				m31.ZdrData = d
+			case "PHI":
+				m31.PhiData = d
+			case "RHO":
+				m31.RhoData = d
+			}
+
 		default:
 			logrus.Panicf("Data Block - unknown type '%s'", blockName)
 		}
 	}
-	logrus.Infof("%s (%3d) ɑ=%7.3f elv=%2d status=%d", m31.Header.RadarIdentifier, m31.Header.AzimuthNumber, m31.Header.AzimuthAngle, m31.Header.ElevationNumber, m31.Header.RadialStatus)
 	return &m31
 }
