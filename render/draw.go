@@ -6,7 +6,6 @@ import (
 	"math"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/bwiggs/go-nexrad/archive2"
 	"github.com/llgcode/draw2d"
 	"github.com/llgcode/draw2d/draw2dimg"
@@ -20,33 +19,35 @@ func Draw(radials []*archive2.Message31) {
 	draw.Draw(dest, dest.Bounds(), image.Black, image.ZP, draw.Src)
 	gc := draw2dimg.NewGraphicContext(dest)
 
-	spew.Dump(radials[0])
-	logrus.Infof("VCP: %d", radials[0].VolumeData.VolumeCoveragePatternNumber)
+	// spew.Dump(radials[0])
+	// logrus.Infof("VCP: %d", radials[0].VolumeData.VolumeCoveragePatternNumber)
+
+	// FIXME: could be off by .5 degree if the first measure is actually on the half for full resolution products
+	azimuth := math.Floor(float64(radials[0].Header.AzimuthAngle))
+
 	for i, radial := range radials {
 		_ = i
-		logrus.Infof("Starting Radial -- Azimuth: %f, Res: %d", radial.Header.AzimuthAngle, radial.Header.AzimuthResolutionSpacing)
+		logrus.Infof("Starting Radial -- Azimuth: %f, Res: %d", azimuth, radial.Header.AzimuthResolutionSpacingCode)
 
 		xc := width / 2
 		yc := height / 2
-		radiusX, radiusY := 1.0, 1.0
-		startAngle := float64(radial.Header.AzimuthAngle) * (math.Pi / 180.0)        /* angles are specified */
-		angle := float64(radial.Header.AzimuthResolutionSpacing) * (math.Pi / 180.0) /* clockwise in radians           */
-		// spew.Dump(startAngle, angle)
-		gc.SetLineWidth(1)
-		gc.SetLineCap(draw2d.SquareCap)
+		radiusX, radiusY := 2.0, 2.0
+		startAngle := azimuth * (math.Pi / 180.0)                             /* angles are specified */
+		angle := radial.Header.AzimuthResolutionSpacing() * (math.Pi / 180.0) /* clockwise in radians           */
+		azimuth += radial.Header.AzimuthResolutionSpacing()
+		if azimuth == 360.0 {
+			azimuth = 0.0
+		}
+		gc.SetLineWidth(2)
+		gc.SetLineCap(draw2d.ButtCap)
 
-		for j, dbz := range radial.ReflectivityData.RefData() {
+		for _, dbz := range radial.ReflectivityData.RefData() {
 			radiusX += 1.0
 			radiusY += 1.0
-			// logrus.Debugf("dbz %f", dbz)
-			gc.SetStrokeColor(dbzColorNOAA(dbz))
+			gc.SetStrokeColor(dbzColor(dbz))
 			gc.MoveTo(xc+math.Cos(startAngle)*radiusX, yc+math.Sin(startAngle)*radiusY)
 			gc.ArcTo(xc, yc, radiusX, radiusY, startAngle, angle)
 			gc.Stroke()
-			_ = j
-			// if j >= 10 {
-			// 	break
-			// }
 		}
 	}
 
@@ -58,5 +59,5 @@ func Draw(radials []*archive2.Message31) {
 	// gc.FillStringAt("Hello World", 8, 52)
 
 	// Save to file
-	draw2dimg.SaveToPngFile("reflectivity.png", dest)
+	draw2dimg.SaveToPngFile("reflectivity.spec.png", dest)
 }

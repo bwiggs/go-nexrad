@@ -141,8 +141,8 @@ type Message31Header struct {
 	Spare                uint8
 	// RadialLength Uncompressed length of the radial in bytes including the Data Header block length
 	RadialLength uint16
-	// AzimuthResolutionSpacing Azimuthal spacing between adjacent radials
-	AzimuthResolutionSpacing uint8
+	// AzimuthResolutionSpacing Code for the Azimuthal spacing between adjacent radials. 1 = .5 degrees, 2 = 1degree
+	AzimuthResolutionSpacingCode uint8
 	// RadialStatus Radial Status
 	RadialStatus uint8
 	// ElevationNumber Elevation number within volume scan
@@ -157,6 +157,14 @@ type Message31Header struct {
 	AzimuthIndexingMode uint8
 	DataBlockCount      uint16
 	DataBlockPointers   [9]uint32
+}
+
+// AzimuthResolutionSpacing returns the spacing in degrees according to the AzimuthResolutionSpacingCode
+func (h *Message31Header) AzimuthResolutionSpacing() float64 {
+	if h.AzimuthResolutionSpacingCode == 1 {
+		return 0.5
+	}
+	return 1
 }
 
 type DataBlock struct {
