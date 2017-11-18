@@ -4,8 +4,8 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bwiggs/nexrad/archive2"
-	"github.com/bwiggs/nexrad/render"
+	"github.com/bwiggs/go-nexrad/archive2"
+	"github.com/bwiggs/go-nexrad/render"
 )
 
 func main() {
