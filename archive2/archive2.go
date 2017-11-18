@@ -10,10 +10,13 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+// Archive2 wrapper for processed archive 2 data files.
 type Archive2 struct {
+	// ElevationScans contains all the messages for every elevation scan in the volume
 	ElevationScans map[int][]*Message31
 }
 
+// Extract data from a given archive 2 data file.
 func Extract(f io.ReadSeeker) *Archive2 {
 
 	ar2 := Archive2{
@@ -86,7 +89,7 @@ func Extract(f io.ReadSeeker) *Archive2 {
 				}
 				ar2.ElevationScans[int(m31.Header.ElevationNumber)] = append(ar2.ElevationScans[int(m31.Header.ElevationNumber)], m31)
 			case 2:
-				m2 := RDAStatusMessage2{}
+				m2 := Message2{}
 				binary.Read(msgBuf, binary.BigEndian, &m2)
 				// eat the rest of the record since we know it's 2432 bytes
 				msg := make([]byte, 2432-16-54-12)

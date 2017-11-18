@@ -1,12 +1,12 @@
 package archive2
 
 const (
-	RadialStatusStartOfElevationScan   = 0
-	RadialStatusIntermediateRadialData = 1
-	RadialStatusEndOfElevation         = 2
-	RadialStatusBeginningOfVolumeScan  = 3
-	RadialStatusEndOfVolumeScan        = 4
-	RadialStatusStartNewElevation      = 5
+	radialStatusStartOfElevationScan   = 0
+	radialStatusIntermediateRadialData = 1
+	radialStatusEndOfElevation         = 2
+	radialStatusBeginningOfVolumeScan  = 3
+	radialStatusEndOfVolumeScan        = 4
+	radialStatusStartNewElevation      = 5
 )
 
 // VolumeHeaderRecord for NEXRAD Archive II Data Streams
@@ -55,6 +55,7 @@ type LDMRecord struct {
 	MetaDataRecord []byte
 }
 
+// MessageHeader wrapper for archive2 Message Headers
 type MessageHeader struct {
 	MessageSize         uint16
 	RDARedundantChannel uint8
@@ -88,15 +89,8 @@ type Message31 struct {
 	RhoData          DataMoment
 }
 
-// RadialStatus enumerations
-// 00: Start of new Elevation
-// 01: Intermediate Radial Data
-// 02: End of Elevation
-// 03: Beginning of Volume Scan
-// 04: End of Volume Scan
-// 05: Start of new Elevation - Last Elevation in VCP
-
-type RDAStatusMessage2 struct {
+// Message2 contains RDA Status information about the radar site.
+type Message2 struct {
 	RDAStatus                       uint16
 	OperabilityStatus               uint16
 	ControlStatus                   uint16
@@ -126,6 +120,7 @@ type RDAStatusMessage2 struct {
 	AlarmCodes                      uint16
 }
 
+// Message31Header contains header information for an Archive 2 Message 31 type
 type Message31Header struct {
 	RadarIdentifier [4]byte
 	// CollectionTime Radial data collection time in milliseconds past midnight GMT
@@ -167,11 +162,13 @@ func (h *Message31Header) AzimuthResolutionSpacing() float64 {
 	return 1
 }
 
+// DataBlock wraps Data Block information
 type DataBlock struct {
 	DataBlockType [1]byte
 	DataName      [3]byte
 }
 
+// VolumeData wraps information about the Volume being extracted
 type VolumeData struct {
 	DataBlock
 	// LRTUP Size of data block in bytes
@@ -191,6 +188,7 @@ type VolumeData struct {
 	ProcessingStatus               uint16
 }
 
+// ElevationData wraps Message 31 elevation data
 type ElevationData struct {
 	DataBlock
 	// LRTUP Size of data block in bytes
@@ -201,6 +199,7 @@ type ElevationData struct {
 	CalibConst float32
 }
 
+// RadialData wraps Message 31 radial data
 type RadialData struct {
 	DataBlock
 	// LRTUP Size of data block in bytes
@@ -215,6 +214,7 @@ type RadialData struct {
 	CalibConstVertChan float32
 }
 
+// GenericDataMoment is a generic data wrapper for momentary data. ex: REF, VEL, SW data
 type GenericDataMoment struct {
 	DataBlock
 	Reserved uint32
@@ -238,22 +238,7 @@ type GenericDataMoment struct {
 	Offset float32
 }
 
-// func (d *GenericDataMoment) DataMomentRange() float32 {
-// 	return d.scale(d.dataMomentRange)
-// }
-
-// func (d *GenericDataMoment) DataMomentRangeSampleInterval() float32 {
-// 	return d.scale(d.dataMomentRangeSampleInterval)
-// }
-
-// func (d *GenericDataMoment) TOVER() float32 {
-// 	return d.scale(d.TOVER)
-// }
-
-// func (d *GenericDataMoment) scale(v float32) float32 {
-// 	return (v - d.Offset) / d.Scale
-// }
-
+// DataMoment wraps all Momentary data records. ex: REF, VEL, SW data
 type DataMoment struct {
 	GenericDataMoment
 	Data []byte
