@@ -1,5 +1,7 @@
 # go-nexrad: NEXRAD Data Processing with Go
 
+[![Join the chat at https://gitter.im/bwiggs/go-nexrad](https://badges.gitter.im/bwiggs/go-nexrad.svg)](https://gitter.im/bwiggs/go-nexrad?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/bwiggs/go-nexrad)
 ![](https://img.shields.io/badge/status-alpha-red.svg?style=flat-square)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bwiggs/go-nexrad?style=flat-square)](https://goreportcard.com/report/github.com/bwiggs/go-nexrad)
