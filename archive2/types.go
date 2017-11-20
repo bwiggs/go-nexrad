@@ -251,16 +251,16 @@ type DataMoment struct {
 func (d *DataMoment) RefData() []float32 {
 	convertedData := []float32{}
 	for _, v := range d.Data {
-		convertedData = append(convertedData, ScaleUint(v, d.GenericDataMoment.Offset, d.GenericDataMoment.Scale))
+		convertedData = append(convertedData, scaleUint(uint16(v), d.GenericDataMoment.Offset, d.GenericDataMoment.Scale))
 	}
 	return convertedData
 }
 
-// ScaleUint converts unsigned integer data that can be converted to floating point
+// scaleUint converts unsigned integer data that can be converted to floating point
 // data using the Scale and Offset fields, i.e., F = (N - OFFSET) / SCALE where
 // N is the integer data value and F is the resulting floating point value. A
 // scale value of 0 indicates floating point moment data for each range gate.
-func ScaleUint(n uint8, offset, scale float32) float32 {
+func scaleUint(n uint16, offset, scale float32) float32 {
 	if scale == 0 {
 		return float32(n)
 	}
