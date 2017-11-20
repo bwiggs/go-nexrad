@@ -1,9 +1,9 @@
 # go-nexrad: NEXRAD Data Processing with Go
 
 ![](https://img.shields.io/badge/status-alpha-red.svg?style=flat-square)
-[![Gitter](https://img.shields.io/gitter/room/bwiggs/go-nexrad.svg?style=flat-square)](https://gitter.im/bwiggs/go-nexrad)
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/bwiggs/go-nexrad)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bwiggs/go-nexrad?style=flat-square)](https://goreportcard.com/report/github.com/bwiggs/go-nexrad)
+[![Gitter](https://img.shields.io/gitter/room/bwiggs/go-nexrad.svg?style=flat-square)](https://gitter.im/bwiggs/go-nexrad)
 [![license](https://img.shields.io/github/license/bwiggs/go-nexrad.svg?style=flat-square)](https://raw.githubusercontent.com/bwiggs/go-nexrad/master/LICENSE)
 
 Go Tools for processing NEXRAD binary data. 
