@@ -1,10 +1,124 @@
-package render
+package main
 
 import (
+	"fmt"
+	"image"
 	"image/color"
+	"image/draw"
+	"math"
+	"os"
 
 	"golang.org/x/image/colornames"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/bwiggs/go-nexrad/archive2"
+	"github.com/llgcode/draw2d/draw2dimg"
+	"github.com/spf13/cobra"
 )
+
+var cmd = &cobra.Command{
+	Use:   "nexrad-render",
+	Short: "nexrad-render will create radar images out of NEXRAD Level 2 (archive 2) files.",
+	Run:   run,
+}
+
+var inputFile string
+var outputFile string
+var colorScheme string
+var logLevel string
+var imageSize int32
+
+var colorSchemes map[string]func(float32) color.Color
+
+func init() {
+	cmd.PersistentFlags().StringVarP(&inputFile, "file", "f", "", "archive 2 file to process")
+	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "", "output radar image")
+	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, scope, pink")
+	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
+	cmd.PersistentFlags().Int32VarP(&imageSize, "size", "s", 1024, "size in pixel of the output image")
+
+	colorSchemes = make(map[string]func(float32) color.Color)
+	colorSchemes["noaa"] = dbzColorNOAA
+	colorSchemes["scope"] = dbzColorScope
+	colorSchemes["pink"] = dbzColor
+	colorSchemes["clean-air"] = dbzColorCleanAirMode
+}
+
+func main() {
+	if err := cmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func run(cmd *cobra.Command, args []string) {
+	lvl, err := logrus.ParseLevel(logLevel)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	logrus.SetLevel(lvl)
+
+	f, err := os.Open(inputFile)
+	defer f.Close()
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+
+	ar2 := archive2.Extract(f)
+	render(ar2.ElevationScans[1])
+}
+
+func render(radials []*archive2.Message31) {
+	width := float64(imageSize)
+	height := float64(imageSize)
+
+	canvas := image.NewRGBA(image.Rect(0, 0, int(width), int(height)))
+	draw.Draw(canvas, canvas.Bounds(), image.Black, image.ZP, draw.Src)
+	gc := draw2dimg.NewGraphicContext(canvas)
+
+	xc := width / 2
+	yc := height / 2
+	pxPerKm := width / 2 / 460
+	firstGatePx := float64(radials[0].ReflectivityData.DataMomentRange) / 1000 * pxPerKm
+	gateIntervalKm := float64(radials[0].ReflectivityData.DataMomentRangeSampleInterval) / 1000
+	gateWidthPx := gateIntervalKm * pxPerKm
+
+	for _, radial := range radials {
+
+		// round to the nearest rounded azimuth for the given resolution.
+		// ex: for radial 20.5432, round to 20.5
+		azimuthAngle := float64(radial.Header.AzimuthAngle)
+		azimuthSpacing := radial.Header.AzimuthResolutionSpacing()
+		azimuth := math.Floor(azimuthAngle)
+		if math.Floor(azimuthAngle+azimuthSpacing) > azimuth {
+			azimuth += azimuthSpacing
+		}
+		startAngle := azimuth * (math.Pi / 180.0)      /* angles are specified */
+		endAngle := azimuthSpacing * (math.Pi / 180.0) /* clockwise in radians           */
+
+		// start drawing gates from the start of the first gate
+		distanceX, distanceY := firstGatePx, firstGatePx
+		gc.SetLineWidth(gateWidthPx)
+
+		for _, dbz := range radial.ReflectivityData.RefData() {
+			if dbz > 5 {
+				gc.SetStrokeColor(colorSchemes[colorScheme](dbz))
+				gc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
+				gc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
+				gc.Stroke()
+			}
+
+			distanceX += gateWidthPx
+			distanceY += gateWidthPx
+			azimuth += radial.Header.AzimuthResolutionSpacing()
+		}
+	}
+
+	// Save to file
+	draw2dimg.SaveToPngFile(outputFile, canvas)
+}
 
 func dbzColor(dbz float32) color.Color {
 	if dbz < 5.0 {
