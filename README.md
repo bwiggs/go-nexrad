@@ -19,7 +19,7 @@ Go Tools for processing NEXRAD binary data.
 
 Reflectivity Radar for Hurricane Harvey after making landfall from the Corpus Christy Radar site.
 
-![Hurricane Harvey after landfall](ref.png)
+![Hurricane Harvey after landfall](screenshot.png)
 
 
 ## Resources
