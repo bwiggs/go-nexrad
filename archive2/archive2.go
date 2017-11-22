@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/davecgh/go-spew/spew"
+	// // "github.com/davecgh/go-spew/spew"
 )
 
 // Archive2 wrapper for processed archive 2 data files.
@@ -56,7 +56,7 @@ func Extract(f io.ReadSeeker) *Archive2 {
 			ldm.Size = -ldm.Size
 		}
 
-		logrus.Debug("---------------- LDM Compressed Record ----------------")
+		// logrus.Debug("---------------- LDM Compressed Record ----------------")
 
 		msgBuf := decompress(f, ldm.Size)
 
@@ -77,30 +77,32 @@ func Extract(f io.ReadSeeker) *Archive2 {
 
 			switch header.MessageType {
 			case 0:
-				spew.Dump(header)
 				msg := make([]byte, header.MessageSize)
 				binary.Read(msgBuf, binary.BigEndian, &msg)
-				spew.Dump(msg)
 			case 31:
 				m31 := msg31(msgBuf)
-				logrus.Debugf("%s (%3d) ɑ=%7.3f elv=%2d status=%d", m31.Header.RadarIdentifier, m31.Header.AzimuthNumber, m31.Header.AzimuthAngle, m31.Header.ElevationNumber, m31.Header.RadialStatus)
-				if m31.Header.ElevationNumber > 1 {
-					return &ar2
-				}
+				logrus.Debugf("%s (%3d) ɑ=%7.3f elv=%2d tilt=%5f status=%d", m31.Header.RadarIdentifier, m31.Header.AzimuthNumber, m31.Header.AzimuthAngle, m31.Header.ElevationNumber, m31.Header.ElevationAngle, m31.Header.RadialStatus)
+
+				// if m31.Header.ElevationNumber > 1 {
+				// 	return &ar2
+				// }
 				ar2.ElevationScans[int(m31.Header.ElevationNumber)] = append(ar2.ElevationScans[int(m31.Header.ElevationNumber)], m31)
+				// return &ar2
+				if m31.VelocityData != nil {
+					// logrus.Warn("VelocityData")
+				}
 			case 2:
 				m2 := Message2{}
 				binary.Read(msgBuf, binary.BigEndian, &m2)
 				// eat the rest of the record since we know it's 2432 bytes
 				msg := make([]byte, 2432-16-54-12)
 				binary.Read(msgBuf, binary.BigEndian, &msg)
-				spew.Dump(msg)
+				// spew.Dump(m2, msg)
 			default:
-				spew.Dump(header)
 				// eat the rest of the record since we know it's 2432 bytes (2416 - header)
 				msg := make([]byte, 2416)
 				binary.Read(msgBuf, binary.BigEndian, &msg)
-				spew.Dump(msg)
+				// spew.Dump(msg)
 			}
 		}
 	}
@@ -110,7 +112,7 @@ func Extract(f io.ReadSeeker) *Archive2 {
 func preview(r io.ReadSeeker, n int) {
 	preview := make([]byte, n)
 	binary.Read(r, binary.BigEndian, &preview)
-	spew.Dump(preview)
+	// spew.Dump(preview)
 	r.Seek(-int64(n), io.SeekCurrent)
 }
 
@@ -170,7 +172,7 @@ func msg31(r *bytes.Reader) *Message31 {
 			data := make([]uint8, ldm)
 			binary.Read(r, binary.BigEndian, &data)
 
-			d := DataMoment{
+			d := &DataMoment{
 				GenericDataMoment: m,
 				Data:              data,
 			}
@@ -189,7 +191,6 @@ func msg31(r *bytes.Reader) *Message31 {
 			case "RHO":
 				m31.RhoData = d
 			}
-
 		default:
 			logrus.Panicf("Data Block - unknown type '%s'", blockName)
 		}

@@ -81,12 +81,12 @@ type Message31 struct {
 	VolumeData       VolumeData
 	ElevationData    ElevationData
 	RadialData       RadialData
-	ReflectivityData DataMoment
-	VelocityData     DataMoment
-	SwData           DataMoment
-	ZdrData          DataMoment
-	PhiData          DataMoment
-	RhoData          DataMoment
+	ReflectivityData *DataMoment
+	VelocityData     *DataMoment
+	SwData           *DataMoment
+	ZdrData          *DataMoment
+	PhiData          *DataMoment
+	RhoData          *DataMoment
 }
 
 // Message2 contains RDA Status information about the radar site.
@@ -244,16 +244,27 @@ type DataMoment struct {
 	Data []byte
 }
 
-// RefData for Reflectivity data
+const MomentDataBelowThreshold = 999
+const MomentDataFolded = 998
+
+// ScaledData automaitcally scales the nexrad moment values to their actual values.
 // For all data moment integer values N = 0 indicates received signal is below
 // threshold and N = 1 indicates range folded data. Actual data range is N = 2
 // through 255, or 1023 for data resolution size 8, and 10 bits respectively.
-func (d *DataMoment) RefData() []float32 {
-	convertedData := []float32{}
+func (d *DataMoment) ScaledData() []float32 {
+	scaledData := []float32{}
 	for _, v := range d.Data {
-		convertedData = append(convertedData, scaleUint(uint16(v), d.GenericDataMoment.Offset, d.GenericDataMoment.Scale))
+		if v == 0 {
+			// below threshold
+			scaledData = append(scaledData, MomentDataBelowThreshold)
+		} else if v == 1 {
+			// range folded
+			scaledData = append(scaledData, MomentDataFolded)
+		} else {
+			scaledData = append(scaledData, scaleUint(uint16(v), d.GenericDataMoment.Offset, d.GenericDataMoment.Scale))
+		}
 	}
-	return convertedData
+	return scaledData
 }
 
 // scaleUint converts unsigned integer data that can be converted to floating point
