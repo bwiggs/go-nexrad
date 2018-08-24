@@ -5,8 +5,10 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"io/ioutil"
 	"math"
 	"os"
+	"sync"
 
 	"github.com/llgcode/draw2d"
 
@@ -28,6 +30,7 @@ var inputFile string
 var outputFile string
 var colorScheme string
 var logLevel string
+var directory string
 var product string
 var imageSize int32
 var products []string
@@ -36,11 +39,12 @@ var colorSchemes map[string]map[string]func(float32) color.Color
 
 func init() {
 	cmd.PersistentFlags().StringVarP(&inputFile, "file", "f", "", "archive 2 file to process")
-	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "", "output radar image")
+	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "radar.png", "output radar image")
 	cmd.PersistentFlags().StringVarP(&product, "product", "p", "ref", "product to produce. ex: ref, vel")
 	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, scope, pink")
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
 	cmd.PersistentFlags().Int32VarP(&imageSize, "size", "s", 1024, "size in pixel of the output image")
+	cmd.PersistentFlags().StringVarP(&directory, "directory", "d", "", "directory of L2 files to process")
 
 	products = []string{"ref", "vel"}
 
@@ -66,16 +70,67 @@ func main() {
 }
 
 func run(cmd *cobra.Command, args []string) {
+
+	if _, ok := colorSchemes[product][colorScheme]; !ok {
+		logrus.Fatal(fmt.Sprintf("unsupported colorscheme %s", colorScheme))
+	}
+
 	lvl, err := logrus.ParseLevel(logLevel)
 	if err != nil {
-		logrus.Error(err)
-		return
+		logrus.Fatal(err)
 	}
 	logrus.SetLevel(lvl)
 
-	fmt.Printf("Generating %s from %s\n", product, inputFile)
+	if inputFile != "" {
+		single(inputFile, outputFile, product)
+	} else if directory != "" {
+		animate(directory, product)
+	}
+}
 
-	f, err := os.Open(inputFile)
+func animate(dir, prod string) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	runners := 10
+	source := make(chan string, runners)
+	wg := sync.WaitGroup{}
+	wg.Add(runners)
+	for i := 0; i < runners; i++ {
+		go func(i int) {
+			for l2f := range source {
+				fmt.Printf("Generating %s from %s\n", prod, l2f)
+				f, err := os.Open(dir + "/" + l2f)
+				if err != nil {
+					logrus.Error(err)
+					return
+				}
+				ar2 := archive2.Extract(f)
+				elv := 1
+				if prod == "vel" {
+					elv = 2
+				}
+				render("out/"+l2f+".png", ar2.ElevationScans[elv])
+				f.Close()
+			}
+			wg.Done()
+		}(i)
+	}
+
+	for _, fn := range files {
+		source <- fn.Name()
+	}
+	close(source)
+
+	wg.Wait()
+}
+
+func single(in, out, product string) {
+	fmt.Printf("Generating %s from %s -> %s\n", product, in, out)
+
+	f, err := os.Open(in)
 	defer f.Close()
 	if err != nil {
 		logrus.Error(err)
@@ -87,10 +142,10 @@ func run(cmd *cobra.Command, args []string) {
 	if product == "vel" {
 		elv = 2
 	}
-	render(ar2.ElevationScans[elv])
+	render(out, ar2.ElevationScans[elv])
 }
 
-func render(radials []*archive2.Message31) {
+func render(out string, radials []*archive2.Message31) {
 	width := float64(imageSize)
 	height := float64(imageSize)
 
@@ -156,7 +211,7 @@ func render(radials []*archive2.Message31) {
 	}
 
 	// Save to file
-	draw2dimg.SaveToPngFile(outputFile, canvas)
+	draw2dimg.SaveToPngFile(out, canvas)
 }
 
 func dbzColor(dbz float32) color.Color {
