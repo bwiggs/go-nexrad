@@ -57,8 +57,8 @@ func init() {
 		"clean-air":     dbzColorCleanAirMode,
 	}
 	colorSchemes["vel"] = map[string]func(float32) color.Color{
+		"noaa":       velColorRadarscope, // placeholder for default product value
 		"radarscope": velColorRadarscope,
-		"noaa":       velColorRadarscope,
 	}
 }
 
@@ -72,7 +72,7 @@ func main() {
 func run(cmd *cobra.Command, args []string) {
 
 	if _, ok := colorSchemes[product][colorScheme]; !ok {
-		logrus.Fatal(fmt.Sprintf("unsupported colorscheme %s", colorScheme))
+		logrus.Fatal(fmt.Sprintf("unsupported %s colorscheme %s", product, colorScheme))
 	}
 
 	lvl, err := logrus.ParseLevel(logLevel)
