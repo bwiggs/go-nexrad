@@ -6,8 +6,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/Sirupsen/logrus"
-	// // "github.com/davecgh/go-spew/spew"
+	"github.com/sirupsen/logrus"
 )
 
 // Archive2 wrapper for processed archive 2 data files.

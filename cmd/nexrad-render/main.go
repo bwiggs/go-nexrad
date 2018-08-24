@@ -12,9 +12,9 @@ import (
 
 	"golang.org/x/image/colornames"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/bwiggs/go-nexrad/archive2"
 	"github.com/llgcode/draw2d/draw2dimg"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
