@@ -39,7 +39,7 @@ var colorSchemes map[string]map[string]func(float32) color.Color
 
 func init() {
 	cmd.PersistentFlags().StringVarP(&inputFile, "file", "f", "", "archive 2 file to process")
-	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "radar.png", "output radar image")
+	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "", "output radar image")
 	cmd.PersistentFlags().StringVarP(&product, "product", "p", "ref", "product to produce. ex: ref, vel")
 	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, scope, pink")
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
@@ -82,16 +82,29 @@ func run(cmd *cobra.Command, args []string) {
 	logrus.SetLevel(lvl)
 
 	if inputFile != "" {
-		single(inputFile, outputFile, product)
+		out := "radar.png"
+		if outputFile != "" {
+			out = outputFile
+		}
+		single(inputFile, out, product)
 	} else if directory != "" {
-		animate(directory, product)
+		out := "out"
+		if outputFile != "" {
+			out = outputFile
+		}
+		animate(directory, out, product)
 	}
 }
 
-func animate(dir, prod string) {
+func animate(dir, outdir, prod string) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		logrus.Fatal(err)
+	}
+
+	// create the output dir
+	if _, err := os.Stat(outdir); os.IsNotExist(err) {
+		os.Mkdir(outdir, os.ModePerm)
 	}
 
 	runners := 10
@@ -101,19 +114,20 @@ func animate(dir, prod string) {
 	for i := 0; i < runners; i++ {
 		go func(i int) {
 			for l2f := range source {
-				fmt.Printf("Generating %s from %s\n", prod, l2f)
+				outf := fmt.Sprintf("%s/%s.png", outdir, l2f)
+				fmt.Printf("Generating %s from %s -> %s\n", prod, l2f, outf)
 				f, err := os.Open(dir + "/" + l2f)
 				if err != nil {
 					logrus.Error(err)
 					return
 				}
 				ar2 := archive2.Extract(f)
+				f.Close()
 				elv := 1
 				if prod == "vel" {
 					elv = 2
 				}
-				render("out/"+l2f+".png", ar2.ElevationScans[elv])
-				f.Close()
+				render(outf, ar2.ElevationScans[elv])
 			}
 			wg.Done()
 		}(i)
