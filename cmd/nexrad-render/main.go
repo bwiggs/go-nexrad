@@ -22,7 +22,7 @@ import (
 
 var cmd = &cobra.Command{
 	Use:   "nexrad-render",
-	Short: "nexrad-render will create radar images out of NEXRAD Level 2 (archive 2) files.",
+	Short: "nexrad-render generates products from NEXRAD Level 2 (archive 2) data files.",
 	Run:   run,
 }
 
