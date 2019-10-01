@@ -184,6 +184,14 @@ func render(out string, radials []*archive2.Message31) {
 		if math.Floor(azimuthAngle+azimuthSpacing) > azimuth {
 			azimuth += azimuthSpacing
 		}
+
+		// Convert azimuth angle (in compass degrees) to canvas
+		// coordinate system (where 0 degrees points to the right)
+		azimuth = azimuth - 90
+		if azimuth < 0 {
+			azimuth += 360
+		}
+
 		startAngle := azimuth * (math.Pi / 180.0)      /* angles are specified */
 		endAngle := azimuthSpacing * (math.Pi / 180.0) /* clockwise in radians           */
 
