@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/llgcode/draw2d"
@@ -134,7 +135,9 @@ func animate(dir, outdir, prod string) {
 	}
 
 	for _, fn := range files {
-		source <- fn.Name()
+		if strings.HasSuffix(fn.Name(), ".ar2v") {
+			source <- fn.Name()
+		}
 	}
 	close(source)
 
@@ -154,7 +157,8 @@ func single(in, out, product string) {
 	ar2 := archive2.Extract(f)
 	elv := 1
 	if product == "vel" {
-		elv = 2
+		elv = 2 // uhhh, why did i do this again?
+	}
 	}
 	render(out, ar2.ElevationScans[elv])
 }
