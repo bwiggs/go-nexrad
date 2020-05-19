@@ -178,7 +178,10 @@ func render(out string, radials []*archive2.Message31) {
 	for _, radial := range radials {
 		// round to the nearest rounded azimuth for the given resolution.
 		// ex: for radial 20.5432, round to 20.5
-		azimuthAngle := float64(radial.Header.AzimuthAngle)
+		azimuthAngle := float64(radial.Header.AzimuthAngle) - 90
+		if azimuthAngle < 0 {
+			azimuthAngle = 360.0 + azimuthAngle
+		}
 		azimuthSpacing := radial.Header.AzimuthResolutionSpacing()
 		azimuth := math.Floor(azimuthAngle)
 		if math.Floor(azimuthAngle+azimuthSpacing) > azimuth {
