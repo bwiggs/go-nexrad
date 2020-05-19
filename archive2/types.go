@@ -1,5 +1,7 @@
 package archive2
 
+import "time"
+
 const (
 	radialStatusStartOfElevationScan   = 0
 	radialStatusIntermediateRadialData = 1
@@ -38,15 +40,29 @@ const (
 // Version 06: Super Resolution (RDA Build 12.0 and later)
 // Version 07: Recombined Super Resolution (RDA Build 12.0 and later)
 type VolumeHeaderRecord struct {
-	Tape      [7]byte
-	Version   [2]byte
-	Extension [3]byte
-	// Date NEXRAD- modified Julian
-	Date [4]byte
-	// Time ms since midnight
-	Time [4]byte
+	X_FileName [12]byte
+	// ModifiedJulianDate NEXRAD date since 1970/1/1 = 1
+	X_ModifiedJulianDate int32
+	// X_ModifiedTime  ms since midnight
+	X_ModifiedTime int32
 	// ICAO Radar identifier in ASCII. The four uppercase character International Civil Aviation Organization identifier of the radar producing the data.
 	ICAO [4]byte
+}
+
+// Date returns a time type representing the date of the scan capture
+func (vh VolumeHeaderRecord) Date() time.Time {
+	return timeFromModifiedJulian(int(vh.X_ModifiedJulianDate), int(vh.X_ModifiedTime))
+}
+
+// FileName returns the name of the File
+func (vh VolumeHeaderRecord) FileName() string {
+	return string(vh.X_FileName[:])
+}
+
+func timeFromModifiedJulian(days, ms int) time.Time {
+	return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).
+		AddDate(0, 0, int(days)).
+		Add(time.Duration(ms) * time.Millisecond)
 }
 
 // LDMRecord (Local Data Manager) contains NEXRAD message data.

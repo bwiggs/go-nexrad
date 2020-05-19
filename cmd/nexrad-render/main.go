@@ -8,17 +8,21 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 
 	"github.com/llgcode/draw2d"
 
 	"golang.org/x/image/colornames"
+	"golang.org/x/image/font"
+	"golang.org/x/image/math/fixed"
 
 	"github.com/bwiggs/go-nexrad/archive2"
 	"github.com/llgcode/draw2d/draw2dimg"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"golang.org/x/image/font/inconsolata"
 )
 
 var cmd = &cobra.Command{
@@ -32,8 +36,10 @@ var outputFile string
 var colorScheme string
 var logLevel string
 var directory string
+var renderLabel bool
 var product string
 var imageSize int32
+var runners int
 var products []string
 
 var colorSchemes map[string]map[string]func(float32) color.Color
@@ -45,7 +51,9 @@ func init() {
 	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, scope, pink")
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
 	cmd.PersistentFlags().Int32VarP(&imageSize, "size", "s", 1024, "size in pixel of the output image")
+	cmd.PersistentFlags().IntVarP(&runners, "threads", "t", runtime.NumCPU(), "threads")
 	cmd.PersistentFlags().StringVarP(&directory, "directory", "d", "", "directory of L2 files to process")
+	cmd.PersistentFlags().BoolVarP(&renderLabel, "label", "L", false, "label the image with station and date")
 
 	products = []string{"ref", "vel"}
 
@@ -108,7 +116,6 @@ func animate(dir, outdir, prod string) {
 		os.Mkdir(outdir, os.ModePerm)
 	}
 
-	runners := 10
 	source := make(chan string, runners)
 	wg := sync.WaitGroup{}
 	wg.Add(runners)
@@ -128,7 +135,7 @@ func animate(dir, outdir, prod string) {
 				if prod == "vel" {
 					elv = 2
 				}
-				render(outf, ar2.ElevationScans[elv])
+				render(outf, ar2.ElevationScans[elv], fmt.Sprintf("%s - %s", ar2.VolumeHeader.ICAO, ar2.VolumeHeader.Date()))
 			}
 			wg.Done()
 		}(i)
@@ -159,11 +166,10 @@ func single(in, out, product string) {
 	if product == "vel" {
 		elv = 2 // uhhh, why did i do this again?
 	}
-	}
-	render(out, ar2.ElevationScans[elv])
+	render(out, ar2.ElevationScans[elv], fmt.Sprintf("%s - %s", ar2.VolumeHeader.ICAO, ar2.VolumeHeader.Date()))
 }
 
-func render(out string, radials []*archive2.Message31) {
+func render(out string, radials []*archive2.Message31, label string) {
 	width := float64(imageSize)
 	height := float64(imageSize)
 
@@ -231,8 +237,24 @@ func render(out string, radials []*archive2.Message31) {
 		}
 	}
 
+	if renderLabel {
+		addLabel(canvas, int(width-295.0), int(height-10.0), label)
+	}
+
 	// Save to file
 	draw2dimg.SaveToPngFile(out, canvas)
+}
+
+func addLabel(img *image.RGBA, x, y int, label string) {
+	point := fixed.Point26_6{fixed.Int26_6(x * 64), fixed.Int26_6(y * 64)}
+
+	d := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(colornames.Gray),
+		Face: inconsolata.Bold8x16,
+		Dot:  point,
+	}
+	d.DrawString(label)
 }
 
 func dbzColor(dbz float32) color.Color {
