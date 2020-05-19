@@ -5,7 +5,9 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"io"
+	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,24 +35,21 @@ func Extract(f io.ReadSeeker) *Archive2 {
 
 	// The first LDMRecord is the Metadata Record, consisting of 134 messages of
 	// Metadata message types 15, 13, 18, 3, 5, and 2
-	logrus.Debugf("-------------- LDM Compressed Record (Metadata) ---------------")
-	ldm := LDMRecord{}
-	binary.Read(f, binary.BigEndian, &ldm.Size)
-	decompress(f, ldm.Size)
 
 	// Following the first LDM Metadata Record is a variable number of compressed
 	// records containing 120 radial messages (type 31) plus 0 or more RDA Status
 	// messages (type 2).
+
+	skipLDMRecord := true
 	for true {
 		ldm := LDMRecord{}
 
 		// read in control word (size) of LDM record
 		if err := binary.Read(f, binary.BigEndian, &ldm.Size); err != nil {
-			if err == io.EOF {
-				logrus.Debug("reached EOF")
-				return &ar2
+			if err != io.EOF {
+				logrus.Panic(err.Error())
 			}
-			logrus.Panic(err.Error())
+			return &ar2
 		}
 
 		// As the control word contains a negative size under some circumstances,
@@ -66,8 +65,13 @@ func Extract(f io.ReadSeeker) *Archive2 {
 
 		for true {
 
-			// 12 byte offset is due to legacy compliance of CTM Header
-			msgBuf.Seek(12, io.SeekCurrent)
+			if skipLDMRecord {
+				skipLDMRecord = false
+				break
+			}
+
+			// eat 12 bytes due to legacy compliance of CTM Header, these are all set to nil
+			msgBuf.Seek(LegacyCTMHeaderLen, io.SeekCurrent)
 
 			header := MessageHeader{}
 			if err := binary.Read(msgBuf, binary.BigEndian, &header); err != nil {
@@ -76,8 +80,10 @@ func Extract(f io.ReadSeeker) *Archive2 {
 				}
 				break
 			}
+			// logrus.Debugf("== Message %d (i: %d, size: %d)", header.MessageType, header.IDSequenceNumber, header.MessageSize)
 
-			// logrus.Debugf("== Message %d", header.MessageType)
+			// spew.Dump(header)
+			// time.Sleep(1 * time.Second)
 
 			switch header.MessageType {
 			case 0:
@@ -85,7 +91,7 @@ func Extract(f io.ReadSeeker) *Archive2 {
 				binary.Read(msgBuf, binary.BigEndian, &msg)
 			case 31:
 				m31 := msg31(msgBuf)
-				logrus.Debugf("%s (%3d) ɑ=%7.3f elv=%2d tilt=%5f status=%d", m31.Header.RadarIdentifier, m31.Header.AzimuthNumber, m31.Header.AzimuthAngle, m31.Header.ElevationNumber, m31.Header.ElevationAngle, m31.Header.RadialStatus)
+				logrus.Tracef("%s (%3d) ɑ=%7.3f elv=%2d tilt=%5f status=%d", m31.Header.RadarIdentifier, m31.Header.AzimuthNumber, m31.Header.AzimuthAngle, m31.Header.ElevationNumber, m31.Header.ElevationAngle, m31.Header.RadialStatus)
 
 				// if m31.Header.ElevationNumber > 1 {
 				// 	return &ar2
@@ -102,11 +108,13 @@ func Extract(f io.ReadSeeker) *Archive2 {
 				msg := make([]byte, 2432-16-54-12)
 				binary.Read(msgBuf, binary.BigEndian, &msg)
 				// spew.Dump(m2, msg)
+			// case 15:
+			// 	msg := make([]byte, header.MessageSize)
+			// 	binary.Read(msgBuf, binary.BigEndian, &msg)
+			// 	spew.Dump(msg)
 			default:
-				// eat the rest of the record since we know it's 2432 bytes (2416 - header)
-				msg := make([]byte, 2416)
+				msg := make([]byte, header.MessageSize)
 				binary.Read(msgBuf, binary.BigEndian, &msg)
-				// spew.Dump(msg)
 			}
 		}
 	}
@@ -116,11 +124,15 @@ func Extract(f io.ReadSeeker) *Archive2 {
 func preview(r io.ReadSeeker, n int) {
 	preview := make([]byte, n)
 	binary.Read(r, binary.BigEndian, &preview)
-	// spew.Dump(preview)
+	spew.Dump(preview)
 	r.Seek(-int64(n), io.SeekCurrent)
 }
 
 func decompress(f io.Reader, size int32) *bytes.Reader {
+	start := time.Now()
+	defer func() {
+		logrus.Tracef("bz2 extract: %s", time.Since(start))
+	}()
 	compressedData := make([]byte, size)
 	binary.Read(f, binary.BigEndian, &compressedData)
 	bz2Reader := bzip2.NewReader(bytes.NewReader(compressedData))

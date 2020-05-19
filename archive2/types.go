@@ -7,6 +7,8 @@ const (
 	radialStatusBeginningOfVolumeScan  = 3
 	radialStatusEndOfVolumeScan        = 4
 	radialStatusStartNewElevation      = 5
+
+	LegacyCTMHeaderLen = 12
 )
 
 // VolumeHeaderRecord for NEXRAD Archive II Data Streams
@@ -247,7 +249,7 @@ type DataMoment struct {
 const MomentDataBelowThreshold = 999
 const MomentDataFolded = 998
 
-// ScaledData automaitcally scales the nexrad moment values to their actual values.
+// ScaledData automatically scales the nexrad moment values to their actual values.
 // For all data moment integer values N = 0 indicates received signal is below
 // threshold and N = 1 indicates range folded data. Actual data range is N = 2
 // through 255, or 1023 for data resolution size 8, and 10 bits respectively.
