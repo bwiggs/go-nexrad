@@ -19,6 +19,7 @@ import (
 	"golang.org/x/image/math/fixed"
 
 	"github.com/bwiggs/go-nexrad/archive2"
+	"github.com/cheggaaa/pb/v3"
 	"github.com/llgcode/draw2d/draw2dimg"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -116,6 +117,8 @@ func animate(dir, outdir, prod string) {
 		os.Mkdir(outdir, os.ModePerm)
 	}
 
+	bar := pb.StartNew(len(files))
+
 	source := make(chan string, runners)
 	wg := sync.WaitGroup{}
 	wg.Add(runners)
@@ -123,7 +126,7 @@ func animate(dir, outdir, prod string) {
 		go func(i int) {
 			for l2f := range source {
 				outf := fmt.Sprintf("%s/%s.png", outdir, l2f)
-				fmt.Printf("Generating %s from %s -> %s\n", prod, l2f, outf)
+				// fmt.Printf("Generating %s from %s -> %s\n", prod, l2f, outf)
 				f, err := os.Open(dir + "/" + l2f)
 				if err != nil {
 					logrus.Error(err)
@@ -136,6 +139,7 @@ func animate(dir, outdir, prod string) {
 					elv = 2
 				}
 				render(outf, ar2.ElevationScans[elv], fmt.Sprintf("%s - %s", ar2.VolumeHeader.ICAO, ar2.VolumeHeader.Date()))
+				bar.Increment()
 			}
 			wg.Done()
 		}(i)
@@ -144,11 +148,13 @@ func animate(dir, outdir, prod string) {
 	for _, fn := range files {
 		if strings.HasSuffix(fn.Name(), ".ar2v") {
 			source <- fn.Name()
+		} else {
+			bar.Increment()
 		}
 	}
 	close(source)
-
 	wg.Wait()
+	bar.Finish()
 }
 
 func single(in, out, product string) {
@@ -170,6 +176,13 @@ func single(in, out, product string) {
 }
 
 func render(out string, radials []*archive2.Message31, label string) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered", r)
+		}
+	}()
+
 	width := float64(imageSize)
 	height := float64(imageSize)
 
