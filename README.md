@@ -6,7 +6,7 @@
 [![Gitter](https://img.shields.io/gitter/room/bwiggs/go-nexrad.svg?style=flat-square)](https://gitter.im/bwiggs/go-nexrad)
 [![license](https://img.shields.io/github/license/bwiggs/go-nexrad.svg?style=flat-square)](https://raw.githubusercontent.com/bwiggs/go-nexrad/master/LICENSE)
 
-Go Tools for processing NEXRAD binary data. 
+Go Tools for processing NEXRAD binary data.
 
 ## Features
 
@@ -26,4 +26,5 @@ Reflectivity Radar for Hurricane Harvey after making landfall from the KCRP (Cor
 - [NOAA - Introduction to Doppler Radar](http://www.srh.noaa.gov/jetstream/doppler/doppler_intro.html) - Overview of Doppler Radar Technology
 - [WSR-88D Govenment Training Course](http://training.weather.gov/wdtd/courses/rac/intro/rda/index.html) - Overview of the WSR-88D Radar and system components.
 - [NWS WSR-88D Radar Fundamentals - Slide Deck](https://www.meteor.iastate.edu/classes/mt432/lectures/ISURadarTalk_NWS_2013.pdf) - Kevin Skow National Weather Service, Des Moines, IA
-- [AWS S3 NEXRAD Data Browser](https://s3.amazonaws.com/noaa-nexrad-level2/index.html) - Use this to find Nexrad data files you might be interested in.
+- [AWS S3 NEXRAD Data Browser](https://s3.amazonaws.com/noaa-nexrad-level2/index.html) - Amazon hosted NEXRAD data.
+- [GCP Cloud Storage Console - NEXRAD Data Browser](https://console.cloud.google.com/storage/browser/gcp-public-data-nexrad-l2/) - Google hosted NEXRAD data.
