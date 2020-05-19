@@ -13,6 +13,7 @@ import (
 type Archive2 struct {
 	// ElevationScans contains all the messages for every elevation scan in the volume
 	ElevationScans map[int][]*Message31
+	VolumeHeader   VolumeHeaderRecord
 }
 
 // Extract data from a given archive 2 data file.
@@ -20,11 +21,15 @@ func Extract(f io.ReadSeeker) *Archive2 {
 
 	ar2 := Archive2{
 		ElevationScans: make(map[int][]*Message31),
+		VolumeHeader:   VolumeHeaderRecord{},
 	}
 
+	// -------------------------- Volume Header Record -------------------------
+
 	// read in the volume header record
-	vhr := VolumeHeaderRecord{}
-	binary.Read(f, binary.BigEndian, &vhr)
+	binary.Read(f, binary.BigEndian, &ar2.VolumeHeader)
+
+	// ------------------------------ LDM Records ------------------------------
 
 	// The first LDMRecord is the Metadata Record, consisting of 134 messages of
 	// Metadata message types 15, 13, 18, 3, 5, and 2
