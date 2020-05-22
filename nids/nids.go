@@ -40,6 +40,7 @@ func NewReader(fileName string) (io.ReadCloser, error) {
 type RPGProduct struct {
 	MessageHeader         *MessageHeader
 	GraphicProductMessage *GraphicProductMessage
+	ProductSymbologyBlock *ProductSymbologyBlock
 }
 
 // NewRPGProduct returns a new RPGProduct struct
@@ -47,6 +48,7 @@ func NewRPGProduct() *RPGProduct {
 	return &RPGProduct{
 		MessageHeader:         &MessageHeader{},
 		GraphicProductMessage: &GraphicProductMessage{},
+		ProductSymbologyBlock: &ProductSymbologyBlock{},
 	}
 }
 
@@ -80,8 +82,8 @@ type GraphicProductMessage struct {
 	ProductDependent2   int16
 	ElevationNum        int16
 	ProductDependent3   int16
+	ProductDependent    [32]byte
 	ProductDependent4   int16
-	ProductDependent    [15]byte
 	ProductDependent5   int16
 	ProductDependent6   int16
 	ProductDependent7   int16
@@ -93,6 +95,16 @@ type GraphicProductMessage struct {
 	OffsetSymbology     int32
 	OffsetToGraphic     int32
 	OffsetToTabular     int32
+}
+
+// ProductSymbologyBlock of nids file
+type ProductSymbologyBlock struct {
+	BlockID         int16
+	BlockSize       int32
+	NumLayers       int16
+	LayerDivider1   int16
+	DataLayerLength int32
+	// DisplayDataPackets int32
 }
 
 // Open returns an RPGProduct
@@ -107,12 +119,12 @@ func Open(f string) (*RPGProduct, error) {
 		return nil, err
 	}
 
-	spew.Dump(b[:128])
-
 	buf := bytes.NewReader(b)
 
 	// skip WMO header
 	buf.Seek(54, io.SeekCurrent)
+
+	preview(buf, 256)
 
 	rpg := NewRPGProduct()
 
@@ -126,5 +138,28 @@ func Open(f string) (*RPGProduct, error) {
 		return nil, err
 	}
 
+	buf.Seek(2, io.SeekCurrent)
+
+	preview(buf, 64)
+
+	if err := binary.Read(buf, binary.BigEndian, rpg.ProductSymbologyBlock); err != nil {
+		return nil, err
+	}
+
+	dataLayer := make([]byte, rpg.ProductSymbologyBlock.DataLayerLength)
+
+	if err := binary.Read(buf, binary.BigEndian, dataLayer); err != nil {
+		return nil, err
+	}
+
+	spew.Dump(dataLayer)
+
 	return rpg, nil
+}
+
+func preview(r io.ReadSeeker, n int) {
+	preview := make([]byte, n)
+	binary.Read(r, binary.BigEndian, &preview)
+	spew.Dump(preview)
+	r.Seek(-int64(n), io.SeekCurrent)
 }
