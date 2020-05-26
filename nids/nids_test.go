@@ -14,6 +14,11 @@ func TestOpen(t *testing.T) {
 		t.Fail()
 	}
 
-	spew.Dump(nids)
+	// spew.Dump(nids.MessageHeader)
+	if nids.MessageHeader.NumBlocks != 5 {
+		t.Fatalf("unexpected MessageHeader.NumBlocks. got: %d, expected: %d", nids.MessageHeader.NumBlocks, 5)
+	}
+
+	spew.Dump(nids.ProductSymbologyBlock)
 
 }

@@ -66,6 +66,7 @@ type MessageHeader struct {
 
 // GraphicProductMessage of nids file
 type GraphicProductMessage struct {
+	_                   int16
 	Lat                 int32
 	Lng                 int32
 	Height              int16
@@ -99,10 +100,11 @@ type GraphicProductMessage struct {
 
 // ProductSymbologyBlock of nids file
 type ProductSymbologyBlock struct {
+	_               int16
 	BlockID         int16
 	BlockSize       int32
 	NumLayers       int16
-	LayerDivider1   int16
+	_               int16
 	DataLayerLength int32
 	// DisplayDataPackets int32
 }
@@ -124,24 +126,21 @@ func Open(f string) (*RPGProduct, error) {
 	// skip WMO header
 	buf.Seek(54, io.SeekCurrent)
 
-	preview(buf, 256)
-
 	rpg := NewRPGProduct()
 
+	// MessageHeader
 	if err := binary.Read(buf, binary.BigEndian, rpg.MessageHeader); err != nil {
 		return nil, err
 	}
 
-	buf.Seek(2, io.SeekCurrent)
-
+	// GraphicProductMessage
 	if err := binary.Read(buf, binary.BigEndian, rpg.GraphicProductMessage); err != nil {
 		return nil, err
 	}
 
-	buf.Seek(2, io.SeekCurrent)
+	// preview(buf, 64)
 
-	preview(buf, 64)
-
+	// ProductSymbologyBlock
 	if err := binary.Read(buf, binary.BigEndian, rpg.ProductSymbologyBlock); err != nil {
 		return nil, err
 	}
@@ -153,6 +152,8 @@ func Open(f string) (*RPGProduct, error) {
 	}
 
 	spew.Dump(dataLayer)
+
+	preview(buf, 32)
 
 	return rpg, nil
 }
