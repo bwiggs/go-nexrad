@@ -11,6 +11,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+// WMOHeader contains the World Meterological Org distributionHeader
 type WMOHeader struct {
 	Header [41]byte
 }
@@ -109,6 +110,16 @@ type ProductSymbologyBlock struct {
 	// DisplayDataPackets int32
 }
 
+// ProductSymbologyBlock of nids file
+type GraphicAlphanumericBlock struct {
+	_         int16
+	BlockID   int16
+	BlockSize int32
+	NumPages  int16
+	PageNum   int16
+	PageLen   int16
+}
+
 // Open returns an RPGProduct
 func Open(f string) (*RPGProduct, error) {
 	r, err := NewReader(f)
@@ -151,7 +162,14 @@ func Open(f string) (*RPGProduct, error) {
 		return nil, err
 	}
 
-	spew.Dump(dataLayer)
+	// GraphicAlphanumericBlock
+	spew.Dump(dataLayer[:16])
+	gal := GraphicAlphanumericBlock{}
+	if err := binary.Read(buf, binary.BigEndian, &gal); err != nil {
+		return nil, err
+	}
+
+	spew.Dump(gal)
 
 	preview(buf, 32)
 
