@@ -61,7 +61,7 @@ func (vh VolumeHeaderRecord) FileName() string {
 
 func timeFromModifiedJulian(days, ms int) time.Time {
 	return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).
-		AddDate(0, 0, int(days)).
+		AddDate(0, 0, int(days-1)).
 		Add(time.Duration(ms) * time.Millisecond)
 }
 
