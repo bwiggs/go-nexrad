@@ -180,6 +180,11 @@ func (h *Message31Header) AzimuthResolutionSpacing() float64 {
 	return 1
 }
 
+// Date returns a time type representing the collection time of the scan.
+func (h *Message31Header) Date() time.Time {
+	return timeFromModifiedJulian(int(h.ModifiedJulianDate), int(h.CollectionTime))
+}
+
 // DataBlock wraps Data Block information
 type DataBlock struct {
 	DataBlockType [1]byte
