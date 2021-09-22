@@ -27,6 +27,13 @@ func Extract(f io.ReadSeeker) *Archive2 {
 	}
 
 	// -------------------------- Volume Header Record -------------------------
+	// At the start of every volume is a 24-byte record describing certain attributes
+	// of the radar data. The first 9 bytes is a character constant of which the
+	// last 2 characters identify the version. The next 3 bytes is a numeric string
+	// field starting with the value 001 and increasing by one for each volume of
+	// radar data in the queue to a maximum value of 999. Once the maximum value is
+	// reached the value will be rolled over. The combined 12 bytes are called the
+	// Archive II filename.
 
 	// read in the volume header record
 	binary.Read(f, binary.BigEndian, &ar2.VolumeHeader)
@@ -59,13 +66,14 @@ func Extract(f io.ReadSeeker) *Archive2 {
 			ldm.Size = -ldm.Size
 		}
 
-		// logrus.Debug("---------------- LDM Compressed Record ----------------")
+		logrus.Debugf("---------------- LDM Compressed Record (%dB)----------------", ldm.Size)
 
 		msgBuf := decompress(f, ldm.Size)
 
 		for true {
 
 			if skipLDMRecord {
+				logrus.Debug("ar2: skipping LDM record")
 				skipLDMRecord = false
 				break
 			}
@@ -80,7 +88,7 @@ func Extract(f io.ReadSeeker) *Archive2 {
 				}
 				break
 			}
-			// logrus.Debugf("== Message %d (i: %d, size: %d)", header.MessageType, header.IDSequenceNumber, header.MessageSize)
+			logrus.Debugf("== Message %d (i: %d, size: %d)", header.MessageType, header.IDSequenceNumber, header.MessageSize)
 
 			// spew.Dump(header)
 			// time.Sleep(1 * time.Second)
@@ -113,6 +121,7 @@ func Extract(f io.ReadSeeker) *Archive2 {
 			// 	binary.Read(msgBuf, binary.BigEndian, &msg)
 			// 	spew.Dump(msg)
 			default:
+				logrus.Debug("ar2: processing default message type")
 				msg := make([]byte, header.MessageSize)
 				binary.Read(msgBuf, binary.BigEndian, &msg)
 			}
@@ -131,7 +140,7 @@ func preview(r io.ReadSeeker, n int) {
 func decompress(f io.Reader, size int32) *bytes.Reader {
 	start := time.Now()
 	defer func() {
-		logrus.Tracef("bz2 extract: %s", time.Since(start))
+		logrus.Tracef("ar2: bz2 extracted %d Bytes in %s", size, time.Since(start))
 	}()
 	compressedData := make([]byte, size)
 	binary.Read(f, binary.BigEndian, &compressedData)
@@ -143,32 +152,56 @@ func decompress(f io.Reader, size int32) *bytes.Reader {
 
 func msg31(r *bytes.Reader) *Message31 {
 	m31h := Message31Header{}
+	startPos, _ := r.Seek(0, io.SeekCurrent)
+
 	binary.Read(r, binary.BigEndian, &m31h)
 
 	m31 := Message31{
 		Header: m31h,
 	}
 
-	for i := uint16(0); i < m31h.DataBlockCount; i++ {
+	logrus.Tracef("ar2: m31: reading %d data blocks", m31h.DataBlockCount)
+
+	// you will always get VOL, ELV and RAD. Then there's a a dynamic set of blocks after that.
+	var err error
+	_, err = r.Seek(int64(m31.Header.VOLDataBlockPtr)+startPos, io.SeekStart)
+	if err != nil {
+		logrus.Panic("failed to seek to VOL pointer offset: %s", err)
+	}
+	binary.Read(r, binary.BigEndian, &m31.VolumeData)
+
+	_, err = r.Seek(int64(m31.Header.ELVDataBlockPtr)+startPos, io.SeekStart)
+	if err != nil {
+		logrus.Panic("failed to seek to ELV pointer offset: %s", err)
+	}
+	binary.Read(r, binary.BigEndian, &m31.ElevationData)
+
+	_, err = r.Seek(int64(m31.Header.RADDataBlockPtr)+startPos, io.SeekStart)
+	if err != nil {
+		logrus.Panic("failed to seek to RAD pointer offset: %s", err)
+	}
+	binary.Read(r, binary.BigEndian, &m31.RadialData)
+
+	numAdditionalDataBlocks := m31h.DataBlockCount - 3
+
+	for i := uint16(0); i < numAdditionalDataBlocks; i++ {
+		logrus.Tracef("ar2: m31: processing datablock %d", i)
+
 		d := DataBlock{}
 		if err := binary.Read(r, binary.BigEndian, &d); err != nil {
 			logrus.Panic(err.Error())
 		}
 
-		// rewind
+		// rewind, so we can reread the blockname in the struct processors
 		r.Seek(-4, io.SeekCurrent)
 
 		blockName := string(d.DataName[:])
 		switch blockName {
-		case "VOL":
-			binary.Read(r, binary.BigEndian, &m31.VolumeData)
-		case "ELV":
-			binary.Read(r, binary.BigEndian, &m31.ElevationData)
-		case "RAD":
-			binary.Read(r, binary.BigEndian, &m31.RadialData)
 		case "REF":
 			fallthrough
 		case "VEL":
+			fallthrough
+		case "CFP":
 			fallthrough
 		case "SW ":
 			fallthrough
@@ -208,6 +241,7 @@ func msg31(r *bytes.Reader) *Message31 {
 				m31.RhoData = d
 			}
 		default:
+			// preview(r, 256)
 			logrus.Panicf("Data Block - unknown type '%s'", blockName)
 		}
 	}

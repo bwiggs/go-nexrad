@@ -169,7 +169,11 @@ type Message31Header struct {
 	// AzimuthIndexingMode Azimuth indexing value (Set if azimuth angle is keyed to constant angles)
 	AzimuthIndexingMode uint8
 	DataBlockCount      uint16
-	DataBlockPointers   [9]uint32
+	// DataBlockPointers   [10]uint32
+	VOLDataBlockPtr uint32
+	ELVDataBlockPtr uint32
+	RADDataBlockPtr uint32
+	// REFDataBlockPtr uint32
 }
 
 // AzimuthResolutionSpacing returns the spacing in degrees according to the AzimuthResolutionSpacingCode
