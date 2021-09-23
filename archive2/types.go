@@ -61,7 +61,7 @@ func (vh VolumeHeaderRecord) FileName() string {
 
 func timeFromModifiedJulian(days, ms int) time.Time {
 	return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).
-		AddDate(0, 0, int(days)).
+		AddDate(0, 0, int(days-1)).
 		Add(time.Duration(ms) * time.Millisecond)
 }
 
@@ -182,6 +182,11 @@ func (h *Message31Header) AzimuthResolutionSpacing() float64 {
 		return 0.5
 	}
 	return 1
+}
+
+// Date returns a time type representing the collection time of the scan.
+func (h *Message31Header) Date() time.Time {
+	return timeFromModifiedJulian(int(h.ModifiedJulianDate), int(h.CollectionTime))
 }
 
 // DataBlock wraps Data Block information
