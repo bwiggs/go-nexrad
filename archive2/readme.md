@@ -13,6 +13,13 @@ The first record in the file is the Volume Header Record, a 24-byte record. This
 
 This second record is bzip2 compressed. It consists of Metadata message types 15, 13, 18, 3, 5, and 2. See section 7.3.5. This is all related to radar site status.
 
+The first LDM Compressed Record contains the Archive II messages comprising the Archive II metadata. 
+The size of the uncompressed metadata is fixed at 134 messages, ie. 325888 bytes. 
+The following table contains the message types in the sequence in which they are placed in the LDM Compressed Record.  
+It contains the number of 2432 byte message segments set aside for each message type when they are uncompressed. 
+In those instances where the message requires fewer segments than indicated the message type field of the excess message segments will be set to zero.  
+
+Starting with Build 19, Message type 13 will not be included in the Metadata Record. The space reserved for this message will be filled with zeros.
 
 #### 3-N. LDM Compressed Record
 

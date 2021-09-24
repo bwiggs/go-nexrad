@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"image/draw"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"runtime"
@@ -49,7 +50,7 @@ func init() {
 	cmd.PersistentFlags().StringVarP(&inputFile, "file", "f", "", "archive 2 file to process")
 	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "", "output radar image")
 	cmd.PersistentFlags().StringVarP(&product, "product", "p", "ref", "product to produce. ex: ref, vel")
-	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, scope, pink")
+	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, radarscope, pink")
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
 	cmd.PersistentFlags().Int32VarP(&imageSize, "size", "s", 1024, "size in pixel of the output image")
 	cmd.PersistentFlags().IntVarP(&runners, "threads", "t", runtime.NumCPU(), "threads")
@@ -87,7 +88,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	lvl, err := logrus.ParseLevel(logLevel)
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Fatalf("failed to parse level: %s", err)
 	}
 	logrus.SetLevel(lvl)
 
@@ -158,7 +159,7 @@ func animate(dir, outdir, prod string) {
 }
 
 func single(in, out, product string) {
-	fmt.Printf("Generating %s from %s -> %s\n", product, in, out)
+	fmt.Printf("Generating %s from %s -> %s\n", strings.ToUpper(product), in, out)
 
 	f, err := os.Open(in)
 	defer f.Close()
@@ -168,6 +169,7 @@ func single(in, out, product string) {
 	}
 
 	ar2 := archive2.Extract(f)
+	fmt.Println(ar2)
 	elv := 1
 	if product == "vel" {
 		elv = 2 // uhhh, why did i do this again?
@@ -176,12 +178,6 @@ func single(in, out, product string) {
 }
 
 func render(out string, radials []*archive2.Message31, label string) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Recovered", r)
-		}
-	}()
 
 	width := float64(imageSize)
 	height := float64(imageSize)
@@ -194,10 +190,12 @@ func render(out string, radials []*archive2.Message31, label string) {
 	xc := width / 2
 	yc := height / 2
 	pxPerKm := width / 2 / 460
+	// spew.Dump(radials)
 	firstGatePx := float64(radials[0].ReflectivityData.DataMomentRange) / 1000 * pxPerKm
 	gateIntervalKm := float64(radials[0].ReflectivityData.DataMomentRangeSampleInterval) / 1000
 	gateWidthPx := gateIntervalKm * pxPerKm
 
+	log.Println("rendering radials")
 	for _, radial := range radials {
 		// round to the nearest rounded azimuth for the given resolution.
 		// ex: for radial 20.5432, round to 20.5

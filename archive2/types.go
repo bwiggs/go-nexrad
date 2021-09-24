@@ -1,6 +1,9 @@
 package archive2
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 const (
 	radialStatusStartOfElevationScan   = 0
@@ -11,6 +14,10 @@ const (
 	radialStatusStartNewElevation      = 5
 
 	LegacyCTMHeaderLen = 12
+	MessageHeaderSize  = 16
+	DefaultMessageSize = 2432
+	// MessageBodySize is the size of the message without the legacy CTM header and Message Header. Note: this does not work for Message 31 types.
+	MessageBodySize = DefaultMessageSize - LegacyCTMHeaderLen - MessageHeaderSize
 )
 
 // VolumeHeaderRecord for NEXRAD Archive II Data Streams
@@ -50,6 +57,11 @@ type VolumeHeaderRecord struct {
 }
 
 // Date returns a time type representing the date of the scan capture
+func (vh VolumeHeaderRecord) String() string {
+	return fmt.Sprintf("File:%s ICAO:%s Date:%s", vh.FileName(), string(vh.ICAO[:]), vh.Date())
+}
+
+// Date returns a time type representing the date of the scan capture
 func (vh VolumeHeaderRecord) Date() time.Time {
 	return timeFromModifiedJulian(int(vh.X_ModifiedJulianDate), int(vh.X_ModifiedTime))
 }
@@ -83,105 +95,6 @@ type MessageHeader struct {
 	MillisOfDay         uint32
 	NumMessageSegments  uint16
 	MessageSegmentNum   uint16
-}
-
-// Message31 Digital Radar Data Generic Format
-//
-// Description:
-// The message consists of base data information, that is, reflectivity, mean
-// radial velocity, spectrum width, differential reflectivity, differential
-// phase, correlation coefficient, azimuth angle, elevation angle, cut type,
-// scanning strategy and calibration parameters. The frequency and volume of the
-// message will be dependent on the scanning strategy and the type of data
-// associated with that scanning strategy.
-type Message31 struct {
-	Header           Message31Header
-	VolumeData       VolumeData
-	ElevationData    ElevationData
-	RadialData       RadialData
-	ReflectivityData *DataMoment
-	VelocityData     *DataMoment
-	SwData           *DataMoment
-	ZdrData          *DataMoment
-	PhiData          *DataMoment
-	RhoData          *DataMoment
-}
-
-// Message2 contains RDA Status information about the radar site.
-type Message2 struct {
-	RDAStatus                       uint16
-	OperabilityStatus               uint16
-	ControlStatus                   uint16
-	AuxPowerGeneratorState          uint16
-	AvgTxPower                      uint16
-	HorizRefCalibCorr               uint16
-	DataTxEnabled                   uint16
-	VolumeCoveragePatternNum        uint16
-	RDAControlAuth                  uint16
-	RDABuild                        uint16
-	OperationalMode                 uint16
-	SuperResStatus                  uint16
-	ClutterMitigationDecisionStatus uint16
-	AvsetStatus                     uint16
-	RDAAlarmSummary                 uint16
-	CommandAck                      uint16
-	ChannelControlStatus            uint16
-	SpotBlankingStatus              uint16
-	BypassMapGenDate                uint16
-	BypassMapGenTime                uint16
-	ClutterFilterMapGenDate         uint16
-	ClutterFilterMapGenTime         uint16
-	VertRefCalibCorr                uint16
-	TransitionPwrSourceStatus       uint16
-	RMSControlStatus                uint16
-	PerformanceCheckStatus          uint16
-	AlarmCodes                      uint16
-}
-
-// Message31Header contains header information for an Archive 2 Message 31 type
-type Message31Header struct {
-	RadarIdentifier [4]byte
-	// CollectionTime Radial data collection time in milliseconds past midnight GMT
-	CollectionTime uint32
-	// ModifiedJulianDate Current Julian date - 2440586.5
-	ModifiedJulianDate uint16
-	// AzimuthNumber Radial number within elevation scan
-	AzimuthNumber uint16
-	// AzimuthAngle Azimuth angle at which radial data was collected
-	AzimuthAngle float32
-	// CompressionIndicator Indicates if message type 31 is compressed and what method of compression is used. The Data Header Block is not compressed.
-	CompressionIndicator uint8
-	Spare                uint8
-	// RadialLength Uncompressed length of the radial in bytes including the Data Header block length
-	RadialLength uint16
-	// AzimuthResolutionSpacing Code for the Azimuthal spacing between adjacent radials. 1 = .5 degrees, 2 = 1degree
-	AzimuthResolutionSpacingCode uint8
-	// RadialStatus Radial Status
-	RadialStatus uint8
-	// ElevationNumber Elevation number within volume scan
-	ElevationNumber uint8
-	// CutSectorNumber Sector Number within cut
-	CutSectorNumber uint8
-	// ElevationAngle Elevation angle at which radial radar data was collected
-	ElevationAngle float32
-	// RadialSpotBlankingStatus Spot blanking status for current radial, elevation scan and volume scan
-	RadialSpotBlankingStatus uint8
-	// AzimuthIndexingMode Azimuth indexing value (Set if azimuth angle is keyed to constant angles)
-	AzimuthIndexingMode uint8
-	DataBlockCount      uint16
-	// DataBlockPointers   [10]uint32
-	VOLDataBlockPtr uint32
-	ELVDataBlockPtr uint32
-	RADDataBlockPtr uint32
-	// REFDataBlockPtr uint32
-}
-
-// AzimuthResolutionSpacing returns the spacing in degrees according to the AzimuthResolutionSpacingCode
-func (h *Message31Header) AzimuthResolutionSpacing() float64 {
-	if h.AzimuthResolutionSpacingCode == 1 {
-		return 0.5
-	}
-	return 1
 }
 
 // DataBlock wraps Data Block information
