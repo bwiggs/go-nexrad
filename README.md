@@ -4,6 +4,7 @@
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/bwiggs/go-nexrad)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bwiggs/go-nexrad?style=flat-square)](https://goreportcard.com/report/github.com/bwiggs/go-nexrad)
 [![Gitter](https://img.shields.io/gitter/room/bwiggs/go-nexrad.svg?style=flat-square)](https://gitter.im/bwiggs/go-nexrad)
+[![Slack](https://img.shields.io/badge/slack-chat-green?logo=slack)](slack://channel%3fteam=gophers%26id=go-nexrad)
 [![license](https://img.shields.io/github/license/bwiggs/go-nexrad.svg?style=flat-square)](https://raw.githubusercontent.com/bwiggs/go-nexrad/master/LICENSE)
 
 Go Tools for processing NEXRAD binary data.
