@@ -42,6 +42,7 @@ var directory string
 var renderLabel bool
 var product string
 var imageSize int32
+var elevation int
 var runners int
 var products []string
 
@@ -55,6 +56,7 @@ func init() {
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
 	cmd.PersistentFlags().Int32VarP(&imageSize, "size", "s", 1024, "size in pixel of the output image")
 	cmd.PersistentFlags().IntVarP(&runners, "threads", "t", runtime.NumCPU(), "threads")
+	cmd.PersistentFlags().IntVarP(&elevation, "elevation", "e", 1, "1-15")
 	cmd.PersistentFlags().StringVarP(&directory, "directory", "d", "", "directory of L2 files to process")
 	cmd.PersistentFlags().BoolVarP(&renderLabel, "label", "L", false, "label the image with station and date")
 
@@ -142,11 +144,7 @@ func animate(dir, outdir, prod string) {
 				}
 				ar2 := archive2.Extract(f)
 				f.Close()
-				elv := 1
-				if prod == "vel" {
-					elv = 2
-				}
-				render(outf, ar2.ElevationScans[elv], fmt.Sprintf("%s - %s", ar2.VolumeHeader.ICAO, ar2.VolumeHeader.Date()))
+				render(outf, ar2.ElevationScans[elevation], fmt.Sprintf("%s - %s", ar2.VolumeHeader.ICAO, ar2.VolumeHeader.Date()))
 				bar.Increment()
 			}
 			wg.Done()
@@ -177,12 +175,8 @@ func single(in, out, product string) {
 
 	ar2 := archive2.Extract(f)
 	fmt.Println(ar2)
-	elv := 1
-	// if product != "ref" {
-	// elv = 2 // uhhh, why did i do this again?
-	// }
 	label := fmt.Sprintf("%s %f %s VCP:%d %s %s", ar2.VolumeHeader.ICAO, ar2.ElevationScans[2][0].Header.ElevationAngle, strings.ToUpper(product), ar2.RadarStatus.VolumeCoveragePatternNum, ar2.VolumeHeader.FileName(), ar2.VolumeHeader.Date().Format(time.RFC3339))
-	render(out, ar2.ElevationScans[elv], label)
+	render(out, ar2.ElevationScans[elevation], label)
 }
 
 func render(out string, radials []*archive2.Message31, label string) {
@@ -198,7 +192,6 @@ func render(out string, radials []*archive2.Message31, label string) {
 	xc := width / 2
 	yc := height / 2
 	pxPerKm := width / 2 / 460
-	// spew.Dump(radials)
 	firstGatePx := float64(radials[0].ReflectivityData.DataMomentRange) / 1000 * pxPerKm
 	gateIntervalKm := float64(radials[0].ReflectivityData.DataMomentRangeSampleInterval) / 1000
 	gateWidthPx := gateIntervalKm * pxPerKm

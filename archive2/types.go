@@ -149,6 +149,10 @@ type RadialData struct {
 	CalibConstVertChan float32
 }
 
+func (r RadialData) String() string {
+	return fmt.Sprintf("[%s] %s LRTUP:%d NOISE:[%f %f]", r.DataBlockType, r.DataName, r.LRTUP, r.NoiseLevelHorz, r.NoiseLevelVert)
+}
+
 // GenericDataMoment is a generic data wrapper for momentary data. ex: REF, VEL, SW data
 type GenericDataMoment struct {
 	DataBlock

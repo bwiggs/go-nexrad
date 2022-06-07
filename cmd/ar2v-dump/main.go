@@ -9,8 +9,9 @@ import (
 )
 
 func main() {
-	f, err := os.Open("test.ar2v")
-	logrus.SetLevel(logrus.DebugLevel)
+	f, err := os.Open(os.Args[1])
+	logrus.SetLevel(logrus.InfoLevel)
+
 	defer f.Close()
 	if err != nil {
 		logrus.Error(err)
@@ -22,6 +23,7 @@ func main() {
 	fmt.Printf("Station: %s\n", ar2.VolumeHeader.ICAO)
 	fmt.Printf("Date: %s\n", ar2.VolumeHeader.Date())
 	fmt.Printf("File: %s\n", ar2.VolumeHeader.FileName())
+	fmt.Printf("Elevations: %d\n", ar2.Elevations())
 
 	// spew.Dump(ar2.VolumeHeader)
 }

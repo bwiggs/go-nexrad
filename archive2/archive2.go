@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"sort"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
@@ -129,4 +130,16 @@ func Extract(f io.ReadSeeker) *Archive2 {
 
 func (ar2 *Archive2) String() string {
 	return fmt.Sprintf("%s\n%s", ar2.VolumeHeader, ar2.RadarStatus)
+}
+
+func (ar2 *Archive2) Elevations() []int {
+	elevs := make([]int, len(ar2.ElevationScans))
+	i := 0
+	for k := range ar2.ElevationScans {
+		elevs[i] = k
+		i++
+	}
+
+	sort.Ints(elevs)
+	return elevs
 }

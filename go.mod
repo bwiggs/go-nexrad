@@ -3,16 +3,17 @@ module github.com/bwiggs/go-nexrad
 go 1.12
 
 require (
-	github.com/cheggaaa/pb/v3 v3.0.4
+	github.com/VividCortex/ewma v1.2.0 // indirect
+	github.com/cheggaaa/pb/v3 v3.0.8
 	github.com/davecgh/go-spew v1.1.1
-	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
-	github.com/inconshreveable/mousetrap v1.0.0
-	github.com/llgcode/draw2d v0.0.0-20180817132918-587a55234ca2
-	github.com/sirupsen/logrus v1.6.0
-	github.com/spf13/cobra v0.0.3
-	github.com/spf13/pflag v1.0.2
-	golang.org/x/crypto v0.0.0-20180820150726-614d502a4dac
-	golang.org/x/image v0.0.0-20180708004352-c73c2afc3b81
-	golang.org/x/net v0.0.0-20180824045131-faa378e6dbae
-	golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/jroimartin/gocui v0.5.0
+	github.com/llgcode/draw2d v0.0.0-20210904075650-80aa0a2a901d
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/nsf/termbox-go v1.1.1
+	github.com/sirupsen/logrus v1.8.1
+	github.com/spf13/cobra v1.4.0
+	golang.org/x/image v0.0.0-20220601225756-64ec528b34cd
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 )

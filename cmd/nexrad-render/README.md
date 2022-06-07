@@ -16,6 +16,12 @@
     -p, --product string        product to produce. ex: ref, vel (default "ref")
     -s, --size int32            size in pixel of the output image (default 1024)
 
+# Installation
+
+```
+go install github.com/bwiggs/go-nexrad/cmd/nexrad-render@latest
+```
+
 # Generating Radar Products
 
 Products are what we know as radar images. Currently there are two supported products. Reflectivity and Velocity.
