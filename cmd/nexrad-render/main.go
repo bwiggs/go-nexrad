@@ -10,22 +10,26 @@ import (
 	"math"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/llgcode/draw2d"
+	//"golang.org/x/image/math/fixed"
 
-	"golang.org/x/image/colornames"
-	"golang.org/x/image/font"
-	"golang.org/x/image/math/fixed"
+	//"golang.org/x/image/colornames"
+	//"golang.org/x/image/font"
+	//"golang.org/x/image/math/fixed"
 
 	"github.com/bwiggs/go-nexrad/archive2"
 	"github.com/cheggaaa/pb/v3"
+
 	"github.com/llgcode/draw2d/draw2dimg"
+	"github.com/llgcode/draw2d/draw2dsvg"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"golang.org/x/image/font/inconsolata"
+	//"golang.org/x/image/font/inconsolata"
 )
 
 var cmd = &cobra.Command{
@@ -43,6 +47,7 @@ var renderLabel bool
 var product string
 var imageSize int32
 var elevation int
+var vectorize string
 var runners int
 var products []string
 
@@ -57,6 +62,7 @@ func init() {
 	cmd.PersistentFlags().Int32VarP(&imageSize, "size", "s", 1024, "size in pixel of the output image")
 	cmd.PersistentFlags().IntVarP(&runners, "threads", "t", runtime.NumCPU(), "threads")
 	cmd.PersistentFlags().IntVarP(&elevation, "elevation", "e", 1, "1-15")
+	cmd.PersistentFlags().StringVarP(&vectorize, "vectorize", "v", "png", "ouput image format. png, svg")
 	cmd.PersistentFlags().StringVarP(&directory, "directory", "d", "", "directory of L2 files to process")
 	cmd.PersistentFlags().BoolVarP(&renderLabel, "label", "L", false, "label the image with station and date")
 
@@ -102,7 +108,7 @@ func run(cmd *cobra.Command, args []string) {
 	logrus.SetLevel(lvl)
 
 	if inputFile != "" {
-		out := "radar.png"
+		out := "radar." + strings.ToLower(vectorize)
 		if outputFile != "" {
 			out = outputFile
 		}
@@ -184,10 +190,18 @@ func render(out string, radials []*archive2.Message31, label string) {
 	width := float64(imageSize)
 	height := float64(imageSize)
 
-	canvas := image.NewRGBA(image.Rect(0, 0, int(width), int(height)))
-	draw.Draw(canvas, canvas.Bounds(), image.Black, image.ZP, draw.Src)
+	PNGcanvas := image.NewRGBA(image.Rect(0, 0, int(width), int(height)))
+	draw.Draw(PNGcanvas, PNGcanvas.Bounds(), image.Black, image.ZP, draw.Src)
+	PNGgc := draw2dimg.NewGraphicContext(PNGcanvas)
 
-	gc := draw2dimg.NewGraphicContext(canvas)
+	SVGcanvas := draw2dsvg.NewSvg()
+	SVGcanvas.Width = strconv.Itoa(int(width)) + "px"
+	SVGcanvas.Height = strconv.Itoa(int(width)) + "px"
+	//fmt.Println(canvas.Width)
+	//fmt.Println(canvas.Height)
+	//draw.Draw(canvas, canvas.Bounds(), image.Black, image.ZP, draw.Src)
+
+	SVGgc := draw2dsvg.NewGraphicContext(SVGcanvas)
 
 	xc := width / 2
 	yc := height / 2
@@ -216,8 +230,10 @@ func render(out string, radials []*archive2.Message31, label string) {
 
 		// start drawing gates from the start of the first gate
 		distanceX, distanceY := firstGatePx, firstGatePx
-		gc.SetLineWidth(gateWidthPx + 1)
-		gc.SetLineCap(draw2d.ButtCap)
+		PNGgc.SetLineWidth(gateWidthPx + 1)
+		SVGgc.SetLineWidth(gateWidthPx + 1)
+		PNGgc.SetLineCap(draw2d.ButtCap)
+		SVGgc.SetLineCap(draw2d.ButtCap)
 
 		var gates []float32
 		switch product {
@@ -237,19 +253,25 @@ func render(out string, radials []*archive2.Message31, label string) {
 
 				// valueDist[v] += 1
 
-				gc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
+				PNGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
+				SVGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
 
 				// make the gates connect visually by extending arcs so there is no space between adjacent gates.
 				if i == 0 {
-					gc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
+					PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
+					SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
 				} else if i == numGates-1 {
-					gc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
+					PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
+					SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
 				} else {
-					gc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
+					PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
+					SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
 				}
 
-				gc.SetStrokeColor(colorSchemes[product][colorScheme](v))
-				gc.Stroke()
+				PNGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
+				SVGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
+				PNGgc.Stroke()
+				SVGgc.Stroke()
 			}
 
 			distanceX += gateWidthPx
@@ -260,25 +282,29 @@ func render(out string, radials []*archive2.Message31, label string) {
 
 	// fmt.Println(valueDist)
 
-	if renderLabel {
-		addLabel(canvas, int(width-495.0), int(height-10.0), label)
-	}
+	//if renderLabel {
+	//	addLabel(canvas, int(width-495.0), int(height-10.0), label)
+	//}
 
 	// Save to file
-	draw2dimg.SaveToPngFile(out, canvas)
-}
-
-func addLabel(img *image.RGBA, x, y int, label string) {
-	point := fixed.Point26_6{fixed.Int26_6(x * 64), fixed.Int26_6(y * 64)}
-
-	d := &font.Drawer{
-		Dst:  img,
-		Src:  image.NewUniform(colornames.Gray),
-		Face: inconsolata.Bold8x16,
-		Dot:  point,
+	if vectorize == "png" {
+		draw2dimg.SaveToPngFile(out, PNGcanvas)
+	} else if vectorize == "svg" {
+		draw2dsvg.SaveToSvgFile(out, SVGcanvas)
 	}
-	d.DrawString(label)
 }
+
+//func addLabel(img *draw2dsvg.Svg, x, y int, label string) {
+//	point := fixed.Point26_6{fixed.Int26_6(x * 64), fixed.Int26_6(y * 64)}
+//
+//	d := &font.Drawer{
+//		Dst:  img,
+//		Src:  image.NewUniform(colornames.Gray),
+//		Face: inconsolata.Bold8x16,
+//		Dot:  point,
+//	}
+//	d.DrawString(label)
+//}
 
 // scaleInt scales a number form one range to another range
 func scaleInt(value, oldMax, oldMin, newMax, newMin int32) int32 {
