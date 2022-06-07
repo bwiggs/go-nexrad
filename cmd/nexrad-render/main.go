@@ -16,11 +16,11 @@ import (
 	"time"
 
 	"github.com/llgcode/draw2d"
-	//"golang.org/x/image/math/fixed"
 
-	//"golang.org/x/image/colornames"
-	//"golang.org/x/image/font"
-	//"golang.org/x/image/math/fixed"
+	"golang.org/x/image/math/fixed"
+
+	"golang.org/x/image/colornames"
+	"golang.org/x/image/font"
 
 	"github.com/bwiggs/go-nexrad/archive2"
 	"github.com/cheggaaa/pb/v3"
@@ -29,7 +29,7 @@ import (
 	"github.com/llgcode/draw2d/draw2dsvg"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	//"golang.org/x/image/font/inconsolata"
+	"golang.org/x/image/font/inconsolata"
 )
 
 var cmd = &cobra.Command{
@@ -282,9 +282,13 @@ func render(out string, radials []*archive2.Message31, label string) {
 
 	// fmt.Println(valueDist)
 
-	//if renderLabel {
-	//	addLabel(canvas, int(width-495.0), int(height-10.0), label)
-	//}
+	if renderLabel {
+		if vectorize == "png" {
+			addLabel(PNGcanvas, int(width-495.0), int(height-10.0), label)
+		} else if vectorize == "svg" {
+			logrus.Warn("Labels cannot be drawn on an SVG image, ignoring -L flag")
+		}
+	}
 
 	// Save to file
 	if vectorize == "png" {
@@ -294,17 +298,17 @@ func render(out string, radials []*archive2.Message31, label string) {
 	}
 }
 
-//func addLabel(img *draw2dsvg.Svg, x, y int, label string) {
-//	point := fixed.Point26_6{fixed.Int26_6(x * 64), fixed.Int26_6(y * 64)}
-//
-//	d := &font.Drawer{
-//		Dst:  img,
-//		Src:  image.NewUniform(colornames.Gray),
-//		Face: inconsolata.Bold8x16,
-//		Dot:  point,
-//	}
-//	d.DrawString(label)
-//}
+func addLabel(img *image.RGBA, x, y int, label string) {
+	point := fixed.Point26_6{fixed.Int26_6(x * 64), fixed.Int26_6(y * 64)}
+
+	d := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(colornames.Gray),
+		Face: inconsolata.Bold8x16,
+		Dot:  point,
+	}
+	d.DrawString(label)
+}
 
 // scaleInt scales a number form one range to another range
 func scaleInt(value, oldMax, oldMin, newMax, newMin int32) int32 {
