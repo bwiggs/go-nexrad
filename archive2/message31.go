@@ -163,7 +163,7 @@ func msg31(r *bytes.Reader) *Message31 {
 			// bits stored for each gate (DWS is always a multiple of 8).
 			ldm := m.NumberDataMomentGates * uint16(m.DataWordSize) / 8
 			data := make([]uint8, ldm)
-			binary.Read(r, binary.BigEndian, &data)
+			binary.Read(r, binary.BigEndian, data)
 
 			d := &DataMoment{
 				GenericDataMoment: m,
