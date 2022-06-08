@@ -8,27 +8,27 @@ class GoWorker {
         console.log("GoWorker constructed");
     }
 
-    async validate(buffer) {
-        await this.beforeProcess(buffer);
-        try {
-            this.go.argv = ['nexrad.wasm', '-h'];
-            var st = Date.now();
-            await this.go.run(this.instance);
-            console.log('Time taken:', Date.now() - st);
-
-            return this.go.exitCode === 0;
-        } catch (e) {
-            console.error(e);
-
-            return false;
-        }
-    }
+    //async validate(buffer) {
+    //    await this.beforeProcess(buffer);
+    //    try {
+    //        this.go.argv = ['nexrad.wasm', '-h'];
+    //        var st = Date.now();
+    //        await this.go.run(this.instance);
+    //        console.log('Time taken:', Date.now() - st);
+    //
+    //        return this.go.exitCode === 0;
+    //    } catch (e) {
+    //        console.error(e);
+    //
+    //        return false;
+    //    }
+    //}
 
     async extractPage(buffer, argumentsToPass) {
         await this.beforeProcess(buffer);
 
         var baseArgs = ['nexrad.wasm', '-f', '/radar_file'];
-        var userArgs = argumentsToPass.split(',');
+        var userArgs = argumentsToPass.split(' ');
         for (var i = 0; i < userArgs.length; i++) {
             baseArgs.push(userArgs[i])
         }
@@ -44,7 +44,7 @@ class GoWorker {
         this.fs.unlink('/radar_file', err => {
             console.log("Removed radar_file", err);
             this.fs.unlink('/radar.png', err2 => {
-                console.log("Removed first_page.pdf", err);
+                console.log("Removed radar.png", err);
             })
         })
 
