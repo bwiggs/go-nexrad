@@ -36,10 +36,36 @@
 Output: (More in DevTools Console)
 </textarea>
 
-<div style="margin-top: 20px;">
+<div>
+    Using the code from <a href="https://github.com/bwiggs/go-nexrad">go-nexrad</a>.
+</div>
+<br>
+<div>
     Credit to <a href="https://github.com/wcchoi/go-wasm-pdfcpu">https://github.com/wcchoi/go-wasm-pdfcpu</a> for most of this<br>
     code that runs a CLI go program with WASM on a website.
 </div>
+<br><br>
+<code>
+    nexrad-render generates products from NEXRAD Level 2 (archive 2) data files.
+    <br><br>
+    Usage:<br>
+    &nbsp;&nbsp;&nbsp;nexrad-render [flags]
+    <br><br>
+    Flags:<br>
+    &nbsp;&nbsp;&nbsp;-c, --color-scheme string   color scheme to use. noaa, radarscope, pink (default "noaa")<br>
+    &nbsp;&nbsp;&nbsp;-d, --directory string      directory of L2 files to process<br>
+    &nbsp;&nbsp;&nbsp;-e, --elevation int         1-15 (default 1)<br>
+    &nbsp;&nbsp;&nbsp;-f, --file string           archive 2 file to process<br>
+    &nbsp;&nbsp;&nbsp;-h, --help                  help for nexrad-render<br>
+    &nbsp;&nbsp;&nbsp;-L, --label                 label the image with station and date<br>
+    &nbsp;&nbsp;&nbsp;-l, --log-level string      log level, debug, info, warn, error (default "warn")<br>
+    &nbsp;&nbsp;&nbsp;-o, --output string         output radar image<br>
+    &nbsp;&nbsp;&nbsp;-p, --product string        product to produce. ex: ref, vel, sw, rho (default "ref")<br>
+    &nbsp;&nbsp;&nbsp;-s, --size int32            size in pixel of the output image (default 1024)<br>
+    &nbsp;&nbsp;&nbsp;-t, --threads int           threads (default 8)<br>
+    &nbsp;&nbsp;&nbsp;-v, --vectorize string      ouput image format. png, svg (default "png")<br>
+</code>
+<br>
 
 <script>
 (async function() {
