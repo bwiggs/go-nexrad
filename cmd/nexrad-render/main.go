@@ -23,7 +23,7 @@ import (
 	"golang.org/x/image/font"
 
 	"github.com/bwiggs/go-nexrad/archive2"
-	"github.com/cheggaaa/pb/v3"
+	//"github.com/cheggaaa/pb/v3"
 
 	"github.com/llgcode/draw2d/draw2dimg"
 	"github.com/llgcode/draw2d/draw2dsvg"
@@ -133,7 +133,7 @@ func animate(dir, outdir, prod string) {
 		os.Mkdir(outdir, os.ModePerm)
 	}
 
-	bar := pb.StartNew(len(files))
+	//bar := pb.StartNew(len(files))
 
 	source := make(chan string, runners)
 	wg := sync.WaitGroup{}
@@ -151,7 +151,7 @@ func animate(dir, outdir, prod string) {
 				ar2 := archive2.Extract(f)
 				f.Close()
 				render(outf, ar2.ElevationScans[elevation], fmt.Sprintf("%s - %s", ar2.VolumeHeader.ICAO, ar2.VolumeHeader.Date()))
-				bar.Increment()
+				//bar.Increment()
 			}
 			wg.Done()
 		}(i)
@@ -161,12 +161,12 @@ func animate(dir, outdir, prod string) {
 		if strings.HasSuffix(fn.Name(), ".ar2v") {
 			source <- fn.Name()
 		} else {
-			bar.Increment()
+			//bar.Increment()
 		}
 	}
 	close(source)
 	wg.Wait()
-	bar.Finish()
+	//bar.Finish()
 }
 
 func single(in, out, product string) {
