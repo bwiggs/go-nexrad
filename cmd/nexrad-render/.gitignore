@@ -4,3 +4,4 @@ out/
 *.png
 *.ar2v
 *.tar
+*.wasm
