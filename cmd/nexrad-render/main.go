@@ -210,6 +210,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 	gateIntervalKm := float64(radials[0].ReflectivityData.DataMomentRangeSampleInterval) / 1000
 	gateWidthPx := gateIntervalKm * pxPerKm
 
+	t := time.Now()
 	log.Println("rendering radials")
 	// valueDist := map[float32]int{}
 
@@ -230,10 +231,16 @@ func render(out string, radials []*archive2.Message31, label string) {
 
 		// start drawing gates from the start of the first gate
 		distanceX, distanceY := firstGatePx, firstGatePx
-		PNGgc.SetLineWidth(gateWidthPx + 1)
-		SVGgc.SetLineWidth(gateWidthPx + 1)
-		PNGgc.SetLineCap(draw2d.ButtCap)
-		SVGgc.SetLineCap(draw2d.ButtCap)
+		if vectorize == "png" {
+			PNGgc.SetLineWidth(gateWidthPx + 1)
+		} else if vectorize == "svg" {
+			SVGgc.SetLineWidth(gateWidthPx + 1)
+		}
+		if vectorize == "png" {
+			PNGgc.SetLineCap(draw2d.ButtCap)
+		} else if vectorize == "svg" {
+			SVGgc.SetLineCap(draw2d.ButtCap)
+		}
 
 		var gates []float32
 		switch product {
@@ -253,25 +260,43 @@ func render(out string, radials []*archive2.Message31, label string) {
 
 				// valueDist[v] += 1
 
-				PNGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
-				SVGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
+				if vectorize == "png" {
+					PNGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
+				} else if vectorize == "svg" {
+					SVGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
+				}
 
 				// make the gates connect visually by extending arcs so there is no space between adjacent gates.
 				if i == 0 {
-					PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
-					SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
+					if vectorize == "png" {
+						PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
+					} else if vectorize == "svg" {
+						SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
+					}
 				} else if i == numGates-1 {
-					PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
-					SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
+					if vectorize == "png" {
+						PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
+					} else if vectorize == "svg" {
+						SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
+					}
 				} else {
-					PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
-					SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
+					if vectorize == "png" {
+						PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
+					} else if vectorize == "svg" {
+						SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
+					}
 				}
 
-				PNGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
-				SVGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
-				PNGgc.Stroke()
-				SVGgc.Stroke()
+				if vectorize == "png" {
+					PNGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
+				} else if vectorize == "svg" {
+					SVGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
+				}
+				if vectorize == "png" {
+					PNGgc.Stroke()
+				} else if vectorize == "svg" {
+					SVGgc.Stroke()
+				}
 			}
 
 			distanceX += gateWidthPx
@@ -293,8 +318,10 @@ func render(out string, radials []*archive2.Message31, label string) {
 	// Save to file
 	if vectorize == "png" {
 		draw2dimg.SaveToPngFile(out, PNGcanvas)
+		fmt.Println("Finished in", time.Since(t))
 	} else if vectorize == "svg" {
 		draw2dsvg.SaveToSvgFile(out, SVGcanvas)
+		fmt.Println("Finished in", time.Since(t))
 	}
 }
 
