@@ -214,7 +214,6 @@ func render(out string, radials []*archive2.Message31, label string) {
 	log.Println("rendering radials")
 	// valueDist := map[float32]int{}
 
-	timesDrawn := 1
 	for _, radial := range radials {
 		// round to the nearest rounded azimuth for the given resolution.
 		// ex: for radial 20.5432, round to 20.5
@@ -235,10 +234,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 		if vectorize == "png" {
 			PNGgc.SetLineWidth(gateWidthPx + 1)
 		} else if vectorize == "svg" {
-			if timesDrawn == 1 {
-				SVGgc.SetLineWidth(gateWidthPx)
-			}
-			timesDrawn++
+			SVGgc.SetLineWidth(gateWidthPx + 1)
 		}
 		if vectorize == "png" {
 			PNGgc.SetLineCap(draw2d.ButtCap)
@@ -261,6 +257,13 @@ func render(out string, radials []*archive2.Message31, label string) {
 		numGates := len(gates)
 		for i, v := range gates {
 			if v != archive2.MomentDataBelowThreshold {
+
+				//fmt.Println(gateWidthPx)
+				if i == 0 {
+					SVGgc.SetLineWidth(0)
+				} else if i > 0 {
+					SVGgc.SetLineWidth(gateWidthPx + 1)
+				}
 
 				// valueDist[v] += 1
 
