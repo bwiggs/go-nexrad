@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/color"
@@ -16,6 +17,8 @@ import (
 	"time"
 
 	"github.com/llgcode/draw2d"
+
+	"github.com/ajstarks/svgo"
 
 	"golang.org/x/image/math/fixed"
 
@@ -108,7 +111,12 @@ func run(cmd *cobra.Command, args []string) {
 	logrus.SetLevel(lvl)
 
 	if inputFile != "" {
-		out := "radar." + strings.ToLower(vectorize)
+		var out string;
+		if vectorize == "svgtest" {
+			out = "TESTradar.svg"
+		} else {
+			out = "radar." + strings.ToLower(vectorize)
+		}
 		if outputFile != "" {
 			out = outputFile
 		}
@@ -202,6 +210,11 @@ func render(out string, radials []*archive2.Message31, label string) {
 	//draw.Draw(canvas, canvas.Bounds(), image.Black, image.ZP, draw.Src)
 
 	SVGgc := draw2dsvg.NewGraphicContext(SVGcanvas)
+
+	buf := new(bytes.Buffer)
+	canvas := svg.New(buf)
+	canvas.Start(int(width), int(height))
+	//canvas.Group("fill:rgb(0, 0, 255)")
 
 	xc := width / 2
 	yc := height / 2
@@ -304,6 +317,18 @@ func render(out string, radials []*archive2.Message31, label string) {
 				} else if vectorize == "svg" {
 					SVGgc.Stroke()
 				}
+
+				if vectorize == "svgtest" {
+					curScheme := colorSchemes[product][colorScheme](v)
+					stringify := fmt.Sprint(curScheme)
+					s1 := strings.Replace(stringify, "{", "", -1)
+					s2 := strings.Replace(s1, "}", "", -1)
+					s := strings.Split(s2, " ")
+					//fmt.Println(s[0])
+					canvas.Circle(int(xc+math.Cos(startAngle)*distanceX), int(yc+math.Sin(startAngle)*distanceY), int(startAngle) / 2, "fill:rgba(" + s[0] + ", " + s[1] + ", " + s[2] + ", " + s[3] + ")")
+					//fmt.Println(stringify)
+					//canvas.Text(width/2, height/2, "Hello, SVG", "text-anchor:middle;font-size:30px;fill:white")
+				}
 			}
 
 			distanceX += gateWidthPx
@@ -317,7 +342,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 	if renderLabel {
 		if vectorize == "png" {
 			addLabel(PNGcanvas, int(width-495.0), int(height-10.0), label)
-		} else if vectorize == "svg" {
+		} else if vectorize == "svg" || vectorize == "svgtest" {
 			logrus.Warn("Labels cannot be drawn on an SVG image, ignoring -L flag")
 		}
 	}
@@ -330,6 +355,21 @@ func render(out string, radials []*archive2.Message31, label string) {
 		draw2dsvg.SaveToSvgFile(out, SVGcanvas)
 		//minifySvg("radar.svg", "smallradar.svg")
 		//getBitOfSvg("radar.svg", "smallest.svg", 500000)
+		fmt.Println("Finished in", time.Since(t))
+	} else if vectorize == "svgtest" {
+		//canvas.Gend()
+		canvas.End()
+		// writes minified content to another file
+		f, err := os.Create("TESTradar.svg")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		_, err2 := f.WriteString(buf.String())
+		if err2 != nil {
+			log.Fatal(err2)
+		}
+
 		fmt.Println("Finished in", time.Since(t))
 	}
 }
