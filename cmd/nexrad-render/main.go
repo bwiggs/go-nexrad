@@ -329,6 +329,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 	} else if vectorize == "svg" {
 		draw2dsvg.SaveToSvgFile(out, SVGcanvas)
 		//minifySvg("radar.svg", "smallradar.svg")
+		//getBitOfSvg("radar.svg", "smallest.svg", 500000)
 		fmt.Println("Finished in", time.Since(t))
 	}
 }

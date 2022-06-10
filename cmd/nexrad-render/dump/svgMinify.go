@@ -99,3 +99,26 @@ func HumanFileSize(size float64) string {
 	getSuffix := suffixes[int(math.Floor(base))]
 	return strconv.FormatFloat(getSize, 'f', -1, 64)+" "+string(getSuffix)
 }
+
+func getBitOfSvg(inputFile string, outputFile string, firstN int) {
+	// read the input file
+	content, err := ioutil.ReadFile(inputFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	text := string(content)
+	textSmaller := text[0:firstN]
+	//fmt.Println(textSmaller)
+	// writes minified content to another file
+	f, err := os.Create(outputFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	_, err2 := f.WriteString(textSmaller)
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+
+	fmt.Println("Extracted first", firstN, "chars of svg to", outputFile)
+}
