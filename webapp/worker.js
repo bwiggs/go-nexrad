@@ -45,12 +45,14 @@ class GoWorker {
             filenameToDownload = "radar.svg"
         } else if (baseArgs.includes("svgtest")) {
             filenameToDownload = "TESTradar.svg"
+        } else {
+            filenameToDownload = "radar.png"
         }
 
         let contents = await this.fs.readFileAsync(filenameToDownload);
         console.log("after run main:", contents);
 
-        this.fs.unlink(filenameToDownload, err => {
+        this.fs.unlink("/radar_file", err => {
             console.log("Removed radar_file", err);
             this.fs.unlink(filenameToDownload, err2 => {
                 console.log("Removed " + filenameToDownload, err);

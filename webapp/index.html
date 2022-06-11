@@ -216,6 +216,8 @@ Output: (More in DevTools Console)
                     download(new Blob([result]), 'radar.svg');
                 } else if (doesItContain.includes("svgtest")) {
                     download(new Blob([result]), 'TESTradar.svg');
+                } else {
+                    download(new Blob([result]), 'radar.png');
                 }
             } catch(e) {
                 console.log("caught in index.html!", e);
