@@ -38,13 +38,22 @@ class GoWorker {
         await this.go.run(this.instance);
         console.log('Time taken:', Date.now() - st);
 
-        let contents = await this.fs.readFileAsync('/radar.png');
+        var filenameToDownload;
+        if (baseArgs.includes("png")) {
+            filenameToDownload = "radar.png"
+        } else if (baseArgs.includes("svg")) {
+            filenameToDownload = "radar.svg"
+        } else if (baseArgs.includes("svgtest")) {
+            filenameToDownload = "TESTradar.svg"
+        }
+
+        let contents = await this.fs.readFileAsync(filenameToDownload);
         console.log("after run main:", contents);
 
-        this.fs.unlink('/radar_file', err => {
+        this.fs.unlink(filenameToDownload, err => {
             console.log("Removed radar_file", err);
-            this.fs.unlink('/radar.png', err2 => {
-                console.log("Removed radar.png", err);
+            this.fs.unlink(filenameToDownload, err2 => {
+                console.log("Removed " + filenameToDownload, err);
             })
         })
 

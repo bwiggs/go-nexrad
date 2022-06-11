@@ -205,7 +205,18 @@ Output: (More in DevTools Console)
                 outtext.value += `DONE Parsing (took: ${Date.now() - st} ms)...\n`;
                 outtext.value += `-----------\n\n`;
 
-                download(new Blob([result]), 'radar.png');
+                var doesItContain = []
+                var stringToCheck = document.getElementById('argumen').value.split(' ');
+                for (var i = 0; i < stringToCheck.length; i++) {
+                    doesItContain.push(stringToCheck[i])
+                }
+                if (doesItContain.includes("png")) {
+                    download(new Blob([result]), 'radar.png');
+                } else if (doesItContain.includes("svg")) {
+                    download(new Blob([result]), 'radar.svg');
+                } else if (doesItContain.includes("svgtest")) {
+                    download(new Blob([result]), 'TESTradar.svg');
+                }
             } catch(e) {
                 console.log("caught in index.html!", e);
                 outtext.value += `Error in parsing (took: ${Date.now() - st} ms)...\n`;

@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
-	github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b // indirect
+	github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b
 	github.com/cheggaaa/pb/v3 v3.0.8
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/color v1.13.0 // indirect
