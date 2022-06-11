@@ -325,9 +325,11 @@ func render(out string, radials []*archive2.Message31, label string) {
 					s2 := strings.Replace(s1, "}", "", -1)
 					s := strings.Split(s2, " ")
 					//fmt.Println(s[0])
-					canvas.Circle(int(xc+math.Cos(startAngle)*distanceX), int(yc+math.Sin(startAngle)*distanceY), int(startAngle) / 2, "fill:rgba(" + s[0] + ", " + s[1] + ", " + s[2] + ", " + s[3] + ")")
-					//fmt.Println(stringify)
-					//canvas.Text(width/2, height/2, "Hello, SVG", "text-anchor:middle;font-size:30px;fill:white")
+
+					// radius could be math.Pow(distanceY * .009, .5)
+					// exponent higher: greater distance between lowest and highest values
+					// multiplier higher: numbers greater overall
+					canvas.Circle(int(xc+math.Cos(startAngle)*distanceX), int(yc+math.Sin(startAngle)*distanceY), 1, "fill:rgba(" + s[0] + ", " + s[1] + ", " + s[2] + ", " + s[3] + ")")
 				}
 			}
 
