@@ -65,7 +65,7 @@ func init() {
 	cmd.PersistentFlags().Int32VarP(&imageSize, "size", "s", 1024, "size in pixel of the output image")
 	cmd.PersistentFlags().IntVarP(&runners, "threads", "t", runtime.NumCPU(), "threads")
 	cmd.PersistentFlags().IntVarP(&elevation, "elevation", "e", 1, "1-15")
-	cmd.PersistentFlags().StringVarP(&vectorize, "vectorize", "v", "png", "ouput image format. png, svg")
+	cmd.PersistentFlags().StringVarP(&vectorize, "vectorize", "v", "png", "ouput image format. png, svg, svgtest")
 	cmd.PersistentFlags().StringVarP(&directory, "directory", "d", "", "directory of L2 files to process")
 	cmd.PersistentFlags().BoolVarP(&renderLabel, "label", "L", false, "label the image with station and date")
 
