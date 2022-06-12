@@ -239,6 +239,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 	if vectorize == "svgtest" {
 		os.RemoveAll("radials")
 		os.Mkdir("radials", 0755)
+		os.Mkdir("radials/split", 0755)
 	}
 	//RADIALcanvas.Group("fill:rgb(0, 0, 255)")
 
@@ -254,16 +255,20 @@ func render(out string, radials []*archive2.Message31, label string) {
 	// valueDist := map[float32]int{}
 
 	ugh := 0
+	timesOutputted := 0
 	for _, radial := range radials {
 		if vectorize == "svgtest" {
-			appendToFile("radials/radial" + strconv.Itoa(ugh) + ".svg", svgHeader)
-			appendToFile("radials/radial" + strconv.Itoa(ugh) + ".svg", RADIALbuf.String())
-			appendToFile("radials/radial" + strconv.Itoa(ugh) + ".svg", "</svg>")
-			if ugh == 0 {
-				os.Remove("radials/radial0.svg")
+			if ugh % 10 == 0 {
+				appendToFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", svgHeader)
+				appendToFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", RADIALbuf.String())
+				appendToFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", "</svg>")
+				RADIALbuf.Reset()
+				timesOutputted++
+			}
+			if timesOutputted == 1 {
+				os.Remove("radials/split/radial0.svg")
 			}
 			ugh++
-			RADIALbuf.Reset()
 		}
 		// round to the nearest rounded azimuth for the given resolution.
 		// ex: for radial 20.5432, round to 20.5
@@ -401,7 +406,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 		RADIALcanvas.End()
 		canvas.End()
 		// writes minified content to another file
-		f, err := os.Create("TESTradar.svg")
+		f, err := os.Create("radials/TESTradar.svg")
 		if err != nil {
 			log.Fatal(err)
 		}
