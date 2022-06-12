@@ -221,20 +221,26 @@ func render(out string, radials []*archive2.Message31, label string) {
 	SVGcanvas := draw2dsvg.NewSvg()
 	SVGcanvas.Width = strconv.Itoa(int(width)) + "px"
 	SVGcanvas.Height = strconv.Itoa(int(width)) + "px"
-	//fmt.Println(canvas.Width)
-	//fmt.Println(canvas.Height)
-	//draw.Draw(canvas, canvas.Bounds(), image.Black, image.ZP, draw.Src)
+	//fmt.Println(RADIALcanvas.Width)
+	//fmt.Println(RADIALcanvas.Height)
+	//draw.Draw(RADIALcanvas, RADIALcanvas.Bounds(), image.Black, image.ZP, draw.Src)
 
 	SVGgc := draw2dsvg.NewGraphicContext(SVGcanvas)
 
+	RADIALbuf := new(bytes.Buffer)
 	buf := new(bytes.Buffer)
+
+	RADIALcanvas := svg.New(RADIALbuf)
 	canvas := svg.New(buf)
+
+	RADIALcanvas.Start(int(width), int(height))
 	canvas.Start(int(width), int(height))
+
 	if vectorize == "svgtest" {
 		os.RemoveAll("radials")
 		os.Mkdir("radials", 0755)
 	}
-	//canvas.Group("fill:rgb(0, 0, 255)")
+	//RADIALcanvas.Group("fill:rgb(0, 0, 255)")
 
 	xc := width / 2
 	yc := height / 2
@@ -251,13 +257,13 @@ func render(out string, radials []*archive2.Message31, label string) {
 	for _, radial := range radials {
 		if vectorize == "svgtest" {
 			appendToFile("radials/radial" + strconv.Itoa(ugh) + ".svg", svgHeader)
-			appendToFile("radials/radial" + strconv.Itoa(ugh) + ".svg", buf.String())
+			appendToFile("radials/radial" + strconv.Itoa(ugh) + ".svg", RADIALbuf.String())
 			appendToFile("radials/radial" + strconv.Itoa(ugh) + ".svg", "</svg>")
 			if ugh == 0 {
 				os.Remove("radials/radial0.svg")
 			}
 			ugh++
-			buf.Reset()
+			RADIALbuf.Reset()
 		}
 		// round to the nearest rounded azimuth for the given resolution.
 		// ex: for radial 20.5432, round to 20.5
@@ -360,6 +366,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 					// radius could be math.Pow(distanceY * .009, .5)
 					// exponent higher: greater distance between lowest and highest values
 					// multiplier higher: numbers greater overall
+					RADIALcanvas.Circle(int(xc+math.Cos(startAngle)*distanceX), int(yc+math.Sin(startAngle)*distanceY), 1, "fill:rgba(" + s[0] + ", " + s[1] + ", " + s[2] + ", " + s[3] + ")")
 					canvas.Circle(int(xc+math.Cos(startAngle)*distanceX), int(yc+math.Sin(startAngle)*distanceY), 1, "fill:rgba(" + s[0] + ", " + s[1] + ", " + s[2] + ", " + s[3] + ")")
 				}
 			}
@@ -390,18 +397,19 @@ func render(out string, radials []*archive2.Message31, label string) {
 		//getBitOfSvg("radar.svg", "smallest.svg", 500000)
 		fmt.Println("Finished in", time.Since(t))
 	} else if vectorize == "svgtest" {
-		//canvas.Gend()
+		//RADIALcanvas.Gend()
+		RADIALcanvas.End()
 		canvas.End()
 		// writes minified content to another file
-		//f, err := os.Create("TESTradar.svg")
-		//if err != nil {
-		//	log.Fatal(err)
-		//}
-		//defer f.Close()
-		//_, err2 := f.WriteString(buf.String())
-		//if err2 != nil {
-		//	log.Fatal(err2)
-		//}
+		f, err := os.Create("TESTradar.svg")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		_, err2 := f.WriteString(buf.String())
+		if err2 != nil {
+			log.Fatal(err2)
+		}
 
 		fmt.Println("Finished in", time.Since(t))
 	}
