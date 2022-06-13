@@ -1,6 +1,8 @@
 package archive2
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"time"
 )
@@ -194,8 +196,20 @@ const MomentDataFolded = 998
 // threshold and N = 1 indicates range folded data. Actual data range is N = 2
 // through 255, or 1023 for data resolution size 8, and 10 bits respectively.
 func (d *DataMoment) ScaledData() []float32 {
+
+	gates := make([]uint16, d.NumberDataMomentGates)
+
+	if d.DataWordSize == 8 {
+		for i, v := range d.Data {
+			gates[i] = uint16(v)
+		}
+	} else if d.DataWordSize == 16 {
+		r := bytes.NewReader(d.Data)
+		binary.Read(r, binary.BigEndian, gates)
+	}
+
 	scaledData := []float32{}
-	for _, v := range d.Data {
+	for _, v := range gates {
 		if v == 0 {
 			// below threshold
 			scaledData = append(scaledData, MomentDataBelowThreshold)
@@ -206,6 +220,7 @@ func (d *DataMoment) ScaledData() []float32 {
 			scaledData = append(scaledData, scaleUint(uint16(v), d.GenericDataMoment.Offset, d.GenericDataMoment.Scale))
 		}
 	}
+
 	return scaledData
 }
 

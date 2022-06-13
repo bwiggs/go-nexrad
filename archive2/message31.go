@@ -26,11 +26,11 @@ type Message31 struct {
 	RadialData       RadialData
 	ReflectivityData *DataMoment
 	VelocityData     *DataMoment
-	SwData           *DataMoment
-	ZdrData          *DataMoment
-	PhiData          *DataMoment
-	RhoData          *DataMoment
-	CfpData          *DataMoment
+	SwData           *DataMoment // SwData (Spectrum Width)
+	ZdrData          *DataMoment // ZdrData (Differential Reflectivity) used to help identify hail shafts, detect updrafts, determine rain drop size, and identify aggregation of dry snow.
+	PhiData          *DataMoment // PhiData (Differential Phase Shift)
+	RhoData          *DataMoment // RhoData (Correlation Coefficient)
+	CfpData          *DataMoment // CfpData (Clutter Filter Power Removed)
 }
 
 func (h Message31Header) String() string {
@@ -195,7 +195,8 @@ func msg31(r io.ReadSeeker) *Message31 {
 			// at the gate spacing resolution specified and DWS is the number of
 			// bits stored for each gate (DWS is always a multiple of 8).
 			ldm := m.NumberDataMomentGates * uint16(m.DataWordSize) / 8
-			data := make([]uint8, ldm)
+
+			data := make([]byte, ldm)
 			binary.Read(r, binary.BigEndian, data)
 
 			d := &DataMoment{
