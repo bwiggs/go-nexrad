@@ -23,7 +23,6 @@ const (
 // VolumeHeaderRecord for NEXRAD Archive II Data Streams
 //
 // Description:
-// The Volume Header Record
 // The Volume Header Record is fixed length and contains information uniquely
 // identifying the format and the data that follows. Sits at the beginning of the
 // Archive II data stream.
@@ -97,6 +96,10 @@ type MessageHeader struct {
 	MessageSegmentNum   uint16
 }
 
+func (vh MessageHeader) Date() time.Time {
+	return timeFromModifiedJulian(int(vh.JulianDate), int(vh.MillisOfDay))
+}
+
 // DataBlock wraps Data Block information
 type DataBlock struct {
 	DataBlockType [1]byte
@@ -144,7 +147,7 @@ type RadialData struct {
 	NoiseLevelHorz     float32
 	NoiseLevelVert     float32
 	NyquistVelocity    uint16
-	Spares             [2]byte
+	RadialFlags        uint16
 	CalibConstHorzChan float32
 	CalibConstVertChan float32
 }
