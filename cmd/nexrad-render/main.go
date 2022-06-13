@@ -67,7 +67,7 @@ func init() {
 		"noaa":          dbzColorNOAA,
 		"scope":         dbzColorScope,
 		"scope-classic": dbzColorScopeClassic,
-		"pink":          dbzColor,
+		"pink":          dbzPink,
 		"clean-air":     dbzColorCleanAirMode,
 	}
 	colorSchemes["vel"] = map[string]func(float32) color.Color{
@@ -77,8 +77,18 @@ func init() {
 	colorSchemes["sw"] = map[string]func(float32) color.Color{
 		"noaa": swColor,
 	}
+	colorSchemes["phi"] = map[string]func(float32) color.Color{
+		"noaa": ccColor,
+	}
 	colorSchemes["rho"] = map[string]func(float32) color.Color{
-		"noaa": rhoColor,
+		"noaa": ccColor,
+	}
+	colorSchemes["zdr"] = map[string]func(float32) color.Color{
+		"noaa":  zdrColorScope,
+		"scope": zdrColorScope,
+	}
+	colorSchemes["cfp"] = map[string]func(float32) color.Color{
+		"noaa": dbzColorNOAA,
 	}
 }
 
@@ -228,8 +238,14 @@ func render(out string, radials []*archive2.Message31, label string) {
 			gates = radial.VelocityData.ScaledData()
 		case "sw":
 			gates = radial.SwData.ScaledData()
+		case "phi":
+			gates = radial.PhiData.ScaledData()
 		case "rho":
 			gates = radial.RhoData.ScaledData()
+		case "zdr":
+			gates = radial.ZdrData.ScaledData()
+		case "cfp":
+			gates = radial.CfpData.ScaledData()
 		default:
 			gates = radial.ReflectivityData.ScaledData()
 		}

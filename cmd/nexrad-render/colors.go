@@ -7,113 +7,160 @@ import (
 	"golang.org/x/image/colornames"
 )
 
-func rhoColor(val float32) color.Color {
-	// fmt.Println(val)
-	if val < 0.275 {
-		return colornames.Black
-	} else if val < 0.35 {
-		return colornames.Darkgrey
-	} else if val < 0.4 {
-		return colornames.Gray
-	} else if val < 0.5 {
-		return colornames.Silver
-	} else if val < 0.6 {
-		return colornames.Midnightblue
-	} else if val < 0.7 {
-		return colornames.Darkblue
-	} else if val < 0.8 {
-		return colornames.Blue
-	} else if val < 0.91 {
-		return colornames.Green
-	} else if val < 0.92 {
-		return colornames.Yellowgreen
-	} else if val < 0.93 {
-		return colornames.Olivedrab
-	} else if val < 0.94 {
-		return colornames.Yellow
-	} else if val < 0.95 {
-		return colornames.Gold
-	} else if val < 0.96 {
-		return colornames.Orange
-	} else if val < 0.97 {
-		return colornames.Orangered
-	} else if val < 0.98 {
-		return colornames.Red
-	} else if val < 0.99 {
-		return colornames.Firebrick
-	} else if val < 1.0 {
-		return colornames.Maroon
-	} else if val < 1.01 {
-		return colornames.Darkmagenta
-	} else if val < 1.02 {
-		return colornames.Purple
-	} else if val < 1.03 {
-		return colornames.Mediumvioletred
-	} else if val < 1.04 {
-		return colornames.Palevioletred
-	} else if val < 1.045 {
-		return colornames.Pink
-	} else if val < 1.05 {
-		return colornames.Lavenderblush
-	} else {
-		return colornames.White
+// ccColor Corollation Coefficient color spectrum
+func ccColor(val float32) color.Color {
+	gradient := []gradientValue{
+		{0.275, colornames.Black},
+		{0.35, colornames.Darkgrey},
+		{0.4, colornames.Gray},
+		{0.5, colornames.Silver},
+		{0.6, colornames.Midnightblue},
+		{0.7, colornames.Darkblue},
+		{0.8, colornames.Blue},
+		{0.91, colornames.Green},
+		{0.92, colornames.Yellowgreen},
+		{0.93, colornames.Olivedrab},
+		{0.94, colornames.Yellow},
+		{0.95, colornames.Gold},
+		{0.96, colornames.Orange},
+		{0.97, colornames.Orangered},
+		{0.98, colornames.Red},
+		{0.99, colornames.Firebrick},
+		{1.0, colornames.Maroon},
+		{1.01, colornames.Darkmagenta},
+		{1.02, colornames.Purple},
+		{1.03, colornames.Mediumvioletred},
+		{1.04, colornames.Palevioletred},
+		{1.045, colornames.Pink},
+		{1.05, colornames.Lavenderblush},
 	}
-	return colornames.Black
+
+	for _, gv := range gradient {
+		if val < gv.val {
+			return gv.color
+		}
+	}
+
+	return colornames.White
 }
 
 func swColor(swx float32) color.Color {
-	// fmt.Println(swx)
-	if swx < 4.0 {
-		return color.NRGBA{0x76, 0x76, 0x76, 0xFF} // dark gray
-	} else if 4.0 <= swx && swx < 8.0 {
-		return color.NRGBA{0x9c, 0x9c, 0x9c, 0xFF} // medium gray
-	} else if 8.0 <= swx && swx < 12.0 {
-		return color.NRGBA{0x00, 0xbb, 0x00, 0xFF} // medium green
-	} else if 12.0 <= swx && swx < 16.0 {
-		return color.NRGBA{0xff, 0x00, 0x00, 0xFF} // bright red
-	} else if 16.0 <= swx && swx < 20.0 {
-		return color.NRGBA{0xd0, 0x70, 0x00, 0xFF} // medium brown
-	} else if 20 <= swx && swx < 500 {
-		return color.NRGBA{0xff, 0xff, 0x00, 0xFF} // yellow
-	} else if swx < 1000 {
-		return color.NRGBA{0x77, 0x00, 0x7d, 0xFF} // dark purple
+
+	gradient := []gradientValue{
+		{1, colornames.Black},
+		{2, color.RGBA{0x22, 0x22, 0x22, 0xff}},
+		{3, color.RGBA{0x33, 0x33, 0x33, 0xff}},
+		{4, color.RGBA{0x44, 0x44, 0x44, 0xff}},
+		{5, color.RGBA{0x55, 0x55, 0x55, 0xff}},
+		{6, color.RGBA{0x66, 0x66, 0x66, 0xff}},
+		{7, color.RGBA{0x77, 0x77, 0x77, 0xff}},
+		{8, color.RGBA{0x88, 0x88, 0x88, 0xff}},
+		{9, color.RGBA{0x99, 0x99, 0x99, 0xff}},
+		{10, colornames.Burlywood},
+		{11, colornames.Sandybrown},
+		{12, colornames.Gold},
+		{13, colornames.Orange},
+		{15, colornames.Orangered},
+		{17, colornames.Red},
+		{19, colornames.Firebrick},
+		{23, colornames.Darkred},
+		{25, colornames.Hotpink},
+		{27, colornames.Fuchsia},
+		{30, colornames.Lavender},
+		{32, colornames.White},
+		{35, colornames.Yellow},
+		{60, colornames.Lime},
+		{1000, colornames.Purple},
 	}
+
+	for _, gv := range gradient {
+		if swx < gv.val {
+			return gv.color
+		}
+	}
+
 	return colornames.Black
 }
 
-func dbzColor(dbz float32) color.Color {
-	if dbz < 5.0 {
-		return colornames.Black
-	} else if dbz >= 5.0 && dbz < 10.0 {
-		return color.NRGBA{0x9C, 0x9C, 0x9C, 0xFF}
-	} else if dbz >= 10.0 && dbz < 15.0 {
-		return color.NRGBA{0x76, 0x76, 0x76, 0xFF}
-	} else if dbz >= 15.0 && dbz < 20.0 {
-		return color.NRGBA{0xFF, 0xAA, 0xAA, 0xFF}
-	} else if dbz >= 20.0 && dbz < 25.0 {
-		return color.NRGBA{0xEE, 0x8C, 0x8C, 0xFF}
-	} else if dbz >= 25.0 && dbz < 30.0 {
-		return color.NRGBA{0xC9, 0x70, 0x70, 0xFF}
-	} else if dbz >= 30.0 && dbz < 35.0 {
-		return color.NRGBA{0x00, 0xFB, 0x90, 0xFF}
-	} else if dbz >= 35.0 && dbz < 40.0 {
-		return color.NRGBA{0x00, 0xBB, 0x00, 0xFF}
-	} else if dbz >= 40.0 && dbz < 45.0 {
-		return color.NRGBA{0xFF, 0xFF, 0x70, 0xFF}
-	} else if dbz >= 45.0 && dbz < 50.0 {
-		return color.NRGBA{0xD0, 0xD0, 0x60, 0xFF}
-	} else if dbz >= 50.0 && dbz < 55.0 {
-		return color.NRGBA{0xFF, 0x60, 0x60, 0xFF}
-	} else if dbz >= 55.0 && dbz < 60.0 {
-		return color.NRGBA{0xDA, 0x00, 0x00, 0xFF}
-	} else if dbz >= 60.0 && dbz < 65.0 {
-		return color.NRGBA{0xAE, 0x00, 0x00, 0xFF}
-	} else if dbz >= 65.0 && dbz < 70.0 {
-		return color.NRGBA{0x00, 0x00, 0xFF, 0xFF}
-	} else if dbz >= 70.0 && dbz < 75.0 {
-		return color.NRGBA{0xFF, 0xFF, 0xFF, 0xFF}
+type gradientValue struct {
+	val   float32
+	color color.RGBA
+}
+
+func zdrColorScope(zdr float32) color.Color {
+
+	gradient := []gradientValue{
+		{-3, colornames.Black},
+		{-1, color.RGBA{0x33, 0x33, 0x33, 0xFF}},
+		{-0.5, color.RGBA{0x66, 0x66, 0x66, 0xFF}},
+		{0.1, color.RGBA{0x99, 0x99, 0x99, 0xFF}},
+		{0, color.RGBA{0xcc, 0xcc, 0xcc, 0xFF}},
+		{0.1, colornames.White},
+		{0.25, colornames.Navy},
+		{0.5, colornames.Blue},
+		{0.75, colornames.Deepskyblue},
+		{1, colornames.Cyan},
+		{1.25, colornames.Mediumaquamarine},
+		{1.5, colornames.Lime},
+		{1.75, colornames.Yellowgreen},
+		{2, colornames.Yellow},
+		{2.5, colornames.Gold},
+		{3, colornames.Orange},
+		{4, colornames.Orangered},
+		{5, colornames.Red},
+		{6, colornames.Maroon},
+		{7, colornames.Hotpink},
+		{10, colornames.Pink},
+		{999, colornames.White},
 	}
-	return color.NRGBA{0xE7, 0x00, 0xFF, 0xFF}
+
+	for _, gv := range gradient {
+		if zdr < gv.val {
+			return gv.color
+		}
+	}
+
+	return colornames.White
+}
+
+func dbzPink(dbz float32) color.Color {
+
+	gradient := []gradientValue{
+		{1, colornames.Black},
+		{2, color.RGBA{0x11, 0x11, 0x11, 0xFF}},
+		{4, color.RGBA{0x22, 0x22, 0x22, 0xFF}},
+		{6, color.RGBA{0x33, 0x33, 0x33, 0xFF}},
+		{8, color.RGBA{0x44, 0x44, 0x44, 0xFF}},
+		{10, color.RGBA{0x55, 0x55, 0x55, 0xFF}},
+		{15, colornames.Rosybrown},
+		{17.5, colornames.Lightsalmon},
+		{20.0, colornames.Darksalmon},
+		{22.5, colornames.Salmon},
+		{25.0, colornames.Lightcoral},
+		{30.0, colornames.Indianred},
+		{35.0, colornames.Mediumspringgreen},
+		{37.5, colornames.Mediumseagreen},
+		{40.0, colornames.Green},
+		{45.0, colornames.Khaki},
+		{50.0, colornames.Gold},
+		{52.5, colornames.Orange},
+		{55.0, colornames.Darkorange},
+		{57.5, colornames.Orangered},
+		{60.0, colornames.Red},
+		{62.5, colornames.Firebrick},
+		{65.0, colornames.Darkred},
+		{67.5, colornames.Navy},
+		{70.0, colornames.Blue},
+		{75.0, colornames.White},
+	}
+
+	for _, gv := range gradient {
+		if dbz < gv.val {
+			return gv.color
+		}
+	}
+
+	return colornames.Purple
 }
 
 func dbzColorCleanAirMode(dbz float32) color.Color {
