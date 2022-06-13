@@ -10,6 +10,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -410,13 +411,18 @@ func render(out string, radials []*archive2.Message31, label string) {
 		//RADIALcanvas.Gend()
 		RADIALcanvas.End()
 		canvas.End()
-		// writes minified content to another file
+
+		// https://stackoverflow.com/a/27417575/18758797
+		// removes all transparent circle lines
+		re := regexp.MustCompile("(?m)[\r\n]+^.*0, 0, 0, 0.*$")
+		res := re.ReplaceAllString(buf.String(), "")
+		// writes content to another file
 		f, err := os.Create("TESTradar.svg")
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		_, err2 := f.WriteString(buf.String())
+		_, err2 := f.WriteString(res)
 		if err2 != nil {
 			log.Fatal(err2)
 		}
