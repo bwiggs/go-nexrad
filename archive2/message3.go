@@ -1,5 +1,7 @@
 package archive2
 
+const Message3Length = 960
+
 // Message3 Performance/Maintenance Data
 // see documentation RDA/RPG 3-44
 type Message3 struct {

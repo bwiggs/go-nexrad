@@ -7,7 +7,6 @@ import (
 	"image/color"
 	"image/draw"
 	"io/ioutil"
-	"log"
 	"math"
 	"os"
 	"runtime"
@@ -36,9 +35,10 @@ import (
 )
 
 var cmd = &cobra.Command{
-	Use:   "nexrad-render",
+	Use:   "nexrad-render [flags] file",
 	Short: "nexrad-render generates products from NEXRAD Level 2 (archive 2) data files.",
 	Run:   run,
+	Args:  cobra.MinimumNArgs(1),
 }
 
 var inputFile string
@@ -57,10 +57,10 @@ var products []string
 var colorSchemes map[string]map[string]func(float32) color.Color
 
 func init() {
-	cmd.PersistentFlags().StringVarP(&inputFile, "file", "f", "", "archive 2 file to process")
-	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "", "output radar image")
+	// cmd.PersistentFlags().StringVarP(&inputFile, "file", "f", "", "archive 2 file to process")
+	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "radar.png", "output file")
 	cmd.PersistentFlags().StringVarP(&product, "product", "p", "ref", "product to produce. ex: ref, vel, sw, rho")
-	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, radarscope, pink")
+	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, scope, pink")
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
 	cmd.PersistentFlags().Int32VarP(&imageSize, "size", "s", 1024, "size in pixel of the output image")
 	cmd.PersistentFlags().IntVarP(&runners, "threads", "t", runtime.NumCPU(), "threads")
@@ -74,14 +74,14 @@ func init() {
 	colorSchemes = make(map[string]map[string]func(float32) color.Color)
 	colorSchemes["ref"] = map[string]func(float32) color.Color{
 		"noaa":          dbzColorNOAA,
-		"radarscope":    dbzColorScope,
+		"scope":         dbzColorScope,
 		"scope-classic": dbzColorScopeClassic,
 		"pink":          dbzColor,
 		"clean-air":     dbzColorCleanAirMode,
 	}
 	colorSchemes["vel"] = map[string]func(float32) color.Color{
-		"noaa":       velColorRadarscope, // placeholder for default product value
-		"radarscope": velColorRadarscope,
+		"noaa":  velColorScope, // placeholder for default product value
+		"scope": velColorScope,
 	}
 	colorSchemes["sw"] = map[string]func(float32) color.Color{
 		"noaa": swColor,
@@ -96,9 +96,12 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	os.Exit(0)
 }
 
 func run(cmd *cobra.Command, args []string) {
+
+	inputFile = args[0]
 
 	if _, ok := colorSchemes[product][colorScheme]; !ok {
 		logrus.Fatal(fmt.Sprintf("unsupported %s colorscheme %s", product, colorScheme))
@@ -178,18 +181,19 @@ func animate(dir, outdir, prod string) {
 }
 
 func single(in, out, product string) {
-	fmt.Printf("Generating %s from %s -> %s\n", strings.ToUpper(product), in, out)
 
 	f, err := os.Open(in)
-	defer f.Close()
 	if err != nil {
 		logrus.Error(err)
 		return
 	}
+	defer f.Close()
 
 	ar2 := archive2.Extract(f)
-	fmt.Println(ar2)
+	logrus.Debug(ar2)
+
 	label := fmt.Sprintf("%s %f %s VCP:%d %s %s", ar2.VolumeHeader.ICAO, ar2.ElevationScans[2][0].Header.ElevationAngle, strings.ToUpper(product), ar2.RadarStatus.VolumeCoveragePatternNum, ar2.VolumeHeader.FileName(), ar2.VolumeHeader.Date().Format(time.RFC3339))
+	logrus.Info("Generating %s from %s -> %s\n", strings.ToUpper(product), in, out)
 	render(out, ar2.ElevationScans[elevation], label)
 }
 
@@ -250,8 +254,8 @@ func render(out string, radials []*archive2.Message31, label string) {
 	gateIntervalKm := float64(radials[0].ReflectivityData.DataMomentRangeSampleInterval) / 1000
 	gateWidthPx := gateIntervalKm * pxPerKm
 
-	t := time.Now()
-	log.Println("rendering radials")
+  t := time.Now()
+  log.Println("rendering radials")
 	// valueDist := map[float32]int{}
 
 	ugh := 0

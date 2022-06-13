@@ -6,6 +6,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const Message2Length = 68
+
 // Message2 RDA Status Data (User 3.2.4.6)
 type Message2 struct {
 	RDAStatus                       uint16
@@ -39,7 +41,7 @@ type Message2 struct {
 }
 
 func (m2 Message2) String() string {
-	return fmt.Sprintf("Message 2 - %s and %s. VCP %d build %.2f",
+	return fmt.Sprintf("Status: %s and %s. VCP %d build %.2f",
 		m2.GetRDAStatus(),
 		m2.GetOperabilityStatus(),
 		m2.VolumeCoveragePatternNum,

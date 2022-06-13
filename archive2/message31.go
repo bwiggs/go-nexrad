@@ -30,6 +30,7 @@ type Message31 struct {
 	ZdrData          *DataMoment
 	PhiData          *DataMoment
 	RhoData          *DataMoment
+	CfpData          *DataMoment
 }
 
 func (h Message31Header) String() string {
@@ -79,10 +80,10 @@ type Message31Header struct {
 	// AzimuthIndexingMode Azimuth indexing value (Set if azimuth angle is keyed to constant angles)
 	AzimuthIndexingMode uint8
 	DataBlockCount      uint16
-	// DataBlockPointers   [10]uint32
-	VOLDataBlockPtr uint32
-	ELVDataBlockPtr uint32
-	RADDataBlockPtr uint32
+
+	// VOLDataBlockPtr uint32
+	// ELVDataBlockPtr uint32
+	// RADDataBlockPtr uint32
 	// REFDataBlockPtr uint32
 }
 
@@ -94,8 +95,10 @@ func (h *Message31Header) AzimuthResolutionSpacing() float64 {
 	return 1
 }
 
-func msg31(r *bytes.Reader) *Message31 {
+func msg31(r io.ReadSeeker) *Message31 {
 	m31h := Message31Header{}
+
+	// save the position of the first byte so we can easily process data blocks later.
 	startPos, _ := r.Seek(0, io.SeekCurrent)
 
 	binary.Read(r, binary.BigEndian, &m31h)
@@ -104,43 +107,73 @@ func msg31(r *bytes.Reader) *Message31 {
 		Header: m31h,
 	}
 
-	// logrus.Tracef("ar2: m31: reading %d data blocks", m31h.DataBlockCount)
+	// Process Data Block Pointers
+	//
+	// At this point we've read the M31 header up through the DataBlockCount. Now we
+	// need to process an arbitrary amount of DataBlockPointers. As the RDA/RPG is
+	// updated, more of these can show up. Ex: in build 19, the CFP data moment was
+	// added, which also added an extra block pointer to the header.
 
-	// you will always get VOL, ELV and RAD. Then there's a a dynamic set of blocks after that.
-	var err error
-	_, err = r.Seek(int64(m31.Header.VOLDataBlockPtr)+startPos, io.SeekStart)
-	if err != nil {
-		logrus.Panicf("failed to seek to VOL pointer offset: %s", err)
+	// we know the minimum number of pointers from the datablock count, read those
+	// in, then read in 4 bytes until we see RVOL string.
+
+	blockPointers := make([]uint32, m31h.DataBlockCount)
+	if err := binary.Read(r, binary.BigEndian, blockPointers); err != nil {
+		logrus.Panic(err.Error())
 	}
-	binary.Read(r, binary.BigEndian, &m31.VolumeData)
 
-	_, err = r.Seek(int64(m31.Header.ELVDataBlockPtr)+startPos, io.SeekStart)
-	if err != nil {
-		logrus.Panicf("failed to seek to ELV pointer offset: %s", err)
+	// check for more DataBlockPointers
+	// keep reading 4 bytes until we see the RVOL moment start
+
+	var lookahead = make([]byte, 4)
+	hexRVOL := []byte("RVOL")
+	maxLoops := 20
+	for i := 0; true; i++ {
+		if err := binary.Read(r, binary.BigEndian, &lookahead); err != nil {
+			logrus.Panic(err.Error())
+		}
+
+		if bytes.Equal(lookahead, hexRVOL) {
+			// backup 4 bytes to keep the block intact
+			r.Seek(-4, io.SeekCurrent)
+			break
+		}
+
+		ptr := binary.BigEndian.Uint32(lookahead)
+		if ptr != 0 {
+			blockPointers = append(blockPointers, ptr)
+		}
+
+		// prevent infinite loop
+		if i == maxLoops {
+			logrus.Fatal("M31 Header: failed to find the end of the datablock pointers.")
+		}
+		i++
 	}
-	binary.Read(r, binary.BigEndian, &m31.ElevationData)
 
-	_, err = r.Seek(int64(m31.Header.RADDataBlockPtr)+startPos, io.SeekStart)
-	if err != nil {
-		logrus.Panicf("failed to seek to RAD pointer offset: %s", err)
-	}
-	binary.Read(r, binary.BigEndian, &m31.RadialData)
-
-	numAdditionalDataBlocks := m31h.DataBlockCount - 3
-
-	for i := uint16(0); i < numAdditionalDataBlocks; i++ {
+	// start processing DataBlocks
+	for _, bptr := range blockPointers {
 		// logrus.Tracef("ar2: m31: processing datablock %d", i)
+
+		r.Seek(startPos+int64(bptr), io.SeekStart)
 
 		d := DataBlock{}
 		if err := binary.Read(r, binary.BigEndian, &d); err != nil {
 			logrus.Panic(err.Error())
 		}
 
-		// rewind, so we can reread the blockname in the struct processors
+		// rewind from reading the datalblock
 		r.Seek(-4, io.SeekCurrent)
 
 		blockName := string(d.DataName[:])
+
 		switch blockName {
+		case "VOL":
+			binary.Read(r, binary.BigEndian, &m31.VolumeData)
+		case "ELV":
+			binary.Read(r, binary.BigEndian, &m31.ElevationData)
+		case "RAD":
+			binary.Read(r, binary.BigEndian, &m31.RadialData)
 		case "REF":
 			fallthrough
 		case "VEL":
@@ -163,7 +196,7 @@ func msg31(r *bytes.Reader) *Message31 {
 			// bits stored for each gate (DWS is always a multiple of 8).
 			ldm := m.NumberDataMomentGates * uint16(m.DataWordSize) / 8
 			data := make([]uint8, ldm)
-			binary.Read(r, binary.BigEndian, &data)
+			binary.Read(r, binary.BigEndian, data)
 
 			d := &DataMoment{
 				GenericDataMoment: m,
@@ -183,6 +216,8 @@ func msg31(r *bytes.Reader) *Message31 {
 				m31.PhiData = d
 			case "RHO":
 				m31.RhoData = d
+			case "CFP":
+				m31.CfpData = d
 			}
 		default:
 			// preview(r, 256)

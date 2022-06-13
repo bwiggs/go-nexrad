@@ -233,7 +233,7 @@ func dbzColorScopeClassic(dbz float32) color.Color {
 	return color.NRGBA{0xff, 0xff, 0xFF, 0xFF}
 }
 
-func velColorRadarscope(vel float32) color.Color {
+func velColorScope(vel float32) color.Color {
 	if vel == archive2.MomentDataFolded {
 		return color.NRGBA{0x69, 0x1A, 0xC1, 0xff}
 	}
