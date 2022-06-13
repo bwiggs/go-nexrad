@@ -235,13 +235,19 @@ func render(out string, radials []*archive2.Message31, label string) {
 	PNGgc := draw2dimg.NewGraphicContext(PNGcanvas)
 
 	SVGcanvas := draw2dsvg.NewSvg()
+	RADIAL_SVGcanvas := draw2dsvg.NewSvg()
+
 	SVGcanvas.Width = strconv.Itoa(int(width)) + "px"
+	RADIAL_SVGcanvas.Width = strconv.Itoa(int(width)) + "px"
+
 	SVGcanvas.Height = strconv.Itoa(int(width)) + "px"
+	RADIAL_SVGcanvas.Height = strconv.Itoa(int(width)) + "px"
 	//fmt.Println(RADIALcanvas.Width)
 	//fmt.Println(RADIALcanvas.Height)
 	//draw.Draw(RADIALcanvas, RADIALcanvas.Bounds(), image.Black, image.ZP, draw.Src)
 
 	SVGgc := draw2dsvg.NewGraphicContext(SVGcanvas)
+	RADIAL_SVGgc := draw2dsvg.NewGraphicContext(RADIAL_SVGcanvas)
 
 	RADIALbuf := new(bytes.Buffer)
 	buf := new(bytes.Buffer)
@@ -273,13 +279,22 @@ func render(out string, radials []*archive2.Message31, label string) {
 	ugh := 0
 	timesOutputted := 0
 	for _, radial := range radials {
-		if vectorize == "svgtest" {
-			if ugh % 10 == 0 {
-				appendToFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", svgHeader)
-				appendToFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", RADIALbuf.String())
-				appendToFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", "</svg>")
-				RADIALbuf.Reset()
-				timesOutputted++
+		if vectorize == "svgtest" || vectorize == "svg" {
+			if vectorize == "svg" {
+				if ugh % 10 == 0 {
+					draw2dsvg.SaveToSvgFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", RADIAL_SVGcanvas)
+					RADIAL_SVGgc.Clear()
+					timesOutputted++
+				}
+			}
+			if vectorize == "svgtest" {
+				if ugh % 10 == 0 {
+					appendToFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", svgHeader)
+					appendToFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", RADIALbuf.String())
+					appendToFile("radials/split/radial" + strconv.Itoa(timesOutputted) + ".svg", "</svg>")
+					RADIALbuf.Reset()
+					timesOutputted++
+				}
 			}
 			if timesOutputted == 1 {
 				os.Remove("radials/split/radial0.svg")
@@ -306,11 +321,13 @@ func render(out string, radials []*archive2.Message31, label string) {
 			PNGgc.SetLineWidth(gateWidthPx + 1)
 		} else if vectorize == "svg" {
 			SVGgc.SetLineWidth(gateWidthPx + 1)
+			RADIAL_SVGgc.SetLineWidth(gateWidthPx + 1)
 		}
 		if vectorize == "png" {
 			PNGgc.SetLineCap(draw2d.ButtCap)
 		} else if vectorize == "svg" {
 			SVGgc.SetLineCap(draw2d.ButtCap)
+			RADIAL_SVGgc.SetLineCap(draw2d.ButtCap)
 		}
 
 		var gates []float32
@@ -338,8 +355,10 @@ func render(out string, radials []*archive2.Message31, label string) {
 				//fmt.Println(gateWidthPx)
 				if i == 0 {
 					SVGgc.SetLineWidth(0)
+					RADIAL_SVGgc.SetLineWidth(0)
 				} else if i > 0 {
 					SVGgc.SetLineWidth(gateWidthPx + 1)
+					RADIAL_SVGgc.SetLineWidth(gateWidthPx + 1)
 				}
 
 				// valueDist[v] += 1
@@ -348,6 +367,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 					PNGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
 				} else if vectorize == "svg" {
 					SVGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
+					RADIAL_SVGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
 				}
 
 				// make the gates connect visually by extending arcs so there is no space between adjacent gates.
@@ -356,18 +376,21 @@ func render(out string, radials []*archive2.Message31, label string) {
 						PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
 					} else if vectorize == "svg" {
 						SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
+						RADIAL_SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
 					}
 				} else if i == numGates-1 {
 					if vectorize == "png" {
 						PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
 					} else if vectorize == "svg" {
 						SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
+						RADIAL_SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
 					}
 				} else {
 					if vectorize == "png" {
 						PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
 					} else if vectorize == "svg" {
 						SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
+						RADIAL_SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
 					}
 				}
 
@@ -375,11 +398,13 @@ func render(out string, radials []*archive2.Message31, label string) {
 					PNGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
 				} else if vectorize == "svg" {
 					SVGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
+					RADIAL_SVGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
 				}
 				if vectorize == "png" {
 					PNGgc.Stroke()
 				} else if vectorize == "svg" {
 					SVGgc.Stroke()
+					RADIAL_SVGgc.Stroke()
 				}
 
 				if vectorize == "svgtest" {
@@ -416,10 +441,10 @@ func render(out string, radials []*archive2.Message31, label string) {
 
 	// Save to file
 	if vectorize == "png" {
-		draw2dimg.SaveToPngFile(out, PNGcanvas)
+		draw2dimg.SaveToPngFile("radar.png", PNGcanvas)
 		fmt.Println("Finished in", time.Since(t))
 	} else if vectorize == "svg" {
-		draw2dsvg.SaveToSvgFile(out, SVGcanvas)
+		draw2dsvg.SaveToSvgFile("radar.svg", SVGcanvas)
 		//minifySvg("radar.svg", "smallradar.svg")
 		//getBitOfSvg("radar.svg", "smallest.svg", 500000)
 		fmt.Println("Finished in", time.Since(t))

@@ -1,7 +1,11 @@
 nexrad-render
+radials
 out/
 *.gif
 *.png
 *.ar2v
 *.tar
 *.wasm
+*.gz
+*.tar.gz
+*.zip
