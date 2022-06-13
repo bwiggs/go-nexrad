@@ -2,4 +2,3 @@ data/
 vendor/
 *.png
 nids/samples
-testdata/
