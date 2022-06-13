@@ -27,7 +27,7 @@ class GoWorker {
     async extractPage(buffer, argumentsToPass) {
         await this.beforeProcess(buffer);
 
-        var baseArgs = ['nexrad.wasm', '-f', '/radar_file'];
+        var baseArgs = ['nexrad.wasm', '/radar_file'];
         var userArgs = argumentsToPass.split(' ');
         for (var i = 0; i < userArgs.length; i++) {
             baseArgs.push(userArgs[i])

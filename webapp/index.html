@@ -78,14 +78,14 @@ Output: (More in DevTools Console)
     &nbsp;&nbsp;&nbsp;nexrad-render [flags]
     <br><br>
     Flags:<br>
-    &nbsp;&nbsp;&nbsp;-c, --color-scheme string   color scheme to use. noaa, radarscope, pink (default "noaa")<br>
+    &nbsp;&nbsp;&nbsp;-c, --color-scheme string   color scheme to use. noaa, scope, scope-classic, pink, clean-air (default "noaa")<br>
     &nbsp;&nbsp;&nbsp;-d, --directory string      directory of L2 files to process<br>
     &nbsp;&nbsp;&nbsp;-e, --elevation int         1-15 (default 1)<br>
-    &nbsp;&nbsp;&nbsp;-f, --file string           archive 2 file to process<br>
+    <!-- &nbsp;&nbsp;&nbsp;-f, --file string           archive 2 file to process<br> -->
     &nbsp;&nbsp;&nbsp;-h, --help                  help for nexrad-render<br>
     &nbsp;&nbsp;&nbsp;-L, --label                 label the image with station and date<br>
     &nbsp;&nbsp;&nbsp;-l, --log-level string      log level, debug, info, warn, error (default "warn")<br>
-    &nbsp;&nbsp;&nbsp;-o, --output string         output radar image<br>
+    &nbsp;&nbsp;&nbsp;-o, --output string         output file (default "radar.png")<br>
     &nbsp;&nbsp;&nbsp;-p, --product string        product to produce. ex: ref, vel, sw, rho (default "ref")<br>
     &nbsp;&nbsp;&nbsp;-s, --size int32            size in pixel of the output image (default 1024)<br>
     &nbsp;&nbsp;&nbsp;-t, --threads int           threads (default 8)<br>

@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"image/draw"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"runtime"
@@ -60,7 +61,7 @@ func init() {
 	// cmd.PersistentFlags().StringVarP(&inputFile, "file", "f", "", "archive 2 file to process")
 	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "radar.png", "output file")
 	cmd.PersistentFlags().StringVarP(&product, "product", "p", "ref", "product to produce. ex: ref, vel, sw, rho")
-	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, scope, pink")
+	cmd.PersistentFlags().StringVarP(&colorScheme, "color-scheme", "c", "noaa", "color scheme to use. noaa, scope, scope-classic, pink, clean-air")
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
 	cmd.PersistentFlags().Int32VarP(&imageSize, "size", "s", 1024, "size in pixel of the output image")
 	cmd.PersistentFlags().IntVarP(&runners, "threads", "t", runtime.NumCPU(), "threads")
@@ -254,8 +255,8 @@ func render(out string, radials []*archive2.Message31, label string) {
 	gateIntervalKm := float64(radials[0].ReflectivityData.DataMomentRangeSampleInterval) / 1000
 	gateWidthPx := gateIntervalKm * pxPerKm
 
-  t := time.Now()
-  log.Println("rendering radials")
+	t := time.Now()
+	log.Println("rendering radials")
 	// valueDist := map[float32]int{}
 
 	ugh := 0
@@ -410,7 +411,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 		RADIALcanvas.End()
 		canvas.End()
 		// writes minified content to another file
-		f, err := os.Create("radials/TESTradar.svg")
+		f, err := os.Create("TESTradar.svg")
 		if err != nil {
 			log.Fatal(err)
 		}
