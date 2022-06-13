@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"image"
 	"image/color"
@@ -449,16 +450,16 @@ func render(out string, radials []*archive2.Message31, label string) {
 		/*
 		* compresses the output file
 		*/
-		//dat, err := os.ReadFile("radar.svg")
-		//if err != nil {
-		//	panic(err)
-		//}
-		//var b bytes.Buffer
-		//w := gzip.NewWriter(&b)
-		//w.Write(dat)
-		//w.Close()
-		//ioutil.WriteFile("radar.svg.gz", b.Bytes(), 0666)
-		//os.Remove("radar.svg")
+		dat, err := ioutil.ReadFile("radar.svg")
+		if err != nil {
+			panic(err)
+		}
+		var b bytes.Buffer
+		w := gzip.NewWriter(&b)
+		w.Write(dat)
+		w.Close()
+		ioutil.WriteFile("radar.svg.gz", b.Bytes(), 0666)
+		os.Remove("radar.svg")
 
 		//minifySvg("radar.svg", "smallradar.svg")
 		//getBitOfSvg("radar.svg", "smallest.svg", 500000)

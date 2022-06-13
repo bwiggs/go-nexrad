@@ -42,7 +42,7 @@ class GoWorker {
         if (baseArgs.includes("png")) {
             filenameToDownload = "radar.png"
         } else if (baseArgs.includes("svg")) {
-            filenameToDownload = "radar.svg"
+            filenameToDownload = "radar.svg.gz"
         } else if (baseArgs.includes("svgtest")) {
             filenameToDownload = "TESTradar.svg"
         } else {
