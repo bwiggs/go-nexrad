@@ -353,6 +353,20 @@ func render(out string, radials []*archive2.Message31, label string) {
 		for i, v := range gates {
 			if v != archive2.MomentDataBelowThreshold {
 
+				curScheme := colorSchemes[product][colorScheme](v)
+				stringify := fmt.Sprint(curScheme)
+				s1 := strings.Replace(stringify, "{", "", -1)
+				s2 := strings.Replace(s1, "}", "", -1)
+				s := strings.Split(s2, " ")
+				//fmt.Println(s[0])
+
+				var isCurColorOpaque bool;
+				if !(s[3] == "0") {
+					isCurColorOpaque = true
+				} else {
+					isCurColorOpaque = false
+				}
+
 				//fmt.Println(gateWidthPx)
 				if i == 0 {
 					SVGgc.SetLineWidth(0)
@@ -366,7 +380,7 @@ func render(out string, radials []*archive2.Message31, label string) {
 
 				if vectorize == "png" {
 					PNGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
-				} else if vectorize == "svg" {
+				} else if vectorize == "svg" && isCurColorOpaque {
 					SVGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
 					RADIAL_SVGgc.MoveTo(xc+math.Cos(startAngle)*distanceX, yc+math.Sin(startAngle)*distanceY)
 				}
@@ -375,21 +389,21 @@ func render(out string, radials []*archive2.Message31, label string) {
 				if i == 0 {
 					if vectorize == "png" {
 						PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
-					} else if vectorize == "svg" {
+					} else if vectorize == "svg" && isCurColorOpaque {
 						SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
 						RADIAL_SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle-.001, endAngle+.001)
 					}
 				} else if i == numGates-1 {
 					if vectorize == "png" {
 						PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
-					} else if vectorize == "svg" {
+					} else if vectorize == "svg" && isCurColorOpaque {
 						SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
 						RADIAL_SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle)
 					}
 				} else {
 					if vectorize == "png" {
 						PNGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
-					} else if vectorize == "svg" {
+					} else if vectorize == "svg" && isCurColorOpaque {
 						SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
 						RADIAL_SVGgc.ArcTo(xc, yc, distanceX, distanceY, startAngle, endAngle+.001)
 					}
@@ -397,25 +411,19 @@ func render(out string, radials []*archive2.Message31, label string) {
 
 				if vectorize == "png" {
 					PNGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
-				} else if vectorize == "svg" {
+				} else if vectorize == "svg" && isCurColorOpaque {
 					SVGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
 					RADIAL_SVGgc.SetStrokeColor(colorSchemes[product][colorScheme](v))
 				}
+
 				if vectorize == "png" {
 					PNGgc.Stroke()
-				} else if vectorize == "svg" {
+				} else if vectorize == "svg" && isCurColorOpaque {
 					SVGgc.Stroke()
 					RADIAL_SVGgc.Stroke()
 				}
 
 				if vectorize == "svgtest" {
-					curScheme := colorSchemes[product][colorScheme](v)
-					stringify := fmt.Sprint(curScheme)
-					s1 := strings.Replace(stringify, "{", "", -1)
-					s2 := strings.Replace(s1, "}", "", -1)
-					s := strings.Split(s2, " ")
-					//fmt.Println(s[0])
-
 					// radius could be math.Pow(distanceY * .009, .5)
 					// exponent higher: greater distance between lowest and highest values
 					// multiplier higher: numbers greater overall
