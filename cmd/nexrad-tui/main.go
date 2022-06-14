@@ -23,6 +23,10 @@ const (
 	ViewElevationDetails = "elevationDetails"
 )
 
+const logo = `░█▀█░█▀▀░█░█░█▀▄░█▀█░█▀▄
+░█░█░█▀▀░▄▀▄░█▀▄░█▀█░█░█
+░▀░▀░▀▀▀░▀░▀░▀░▀░▀░▀░▀▀░`
+
 func loadElevationDetail(g *gocui.Gui, v *gocui.View) error {
 	_, cy := v.Cursor()
 	currElevation = cy + 1
@@ -108,7 +112,7 @@ func keybindings(g *gocui.Gui) error {
 func layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
 
-	fileInfoSize := 10
+	fileInfoSize := 20
 
 	leftPaneWidth := 30
 
@@ -117,6 +121,7 @@ func layout(g *gocui.Gui) error {
 			return err
 		}
 		v.Title = "File Info"
+		fmt.Fprintf(v, "%s\n", logo)
 
 		fmt.Fprintf(v, "File: %s\n", ar2.VolumeHeader.FileName())
 		fmt.Fprintf(v, "ICAO %s\n", ar2.VolumeHeader.ICAO)
