@@ -11,8 +11,12 @@ Go Tools for processing NEXRAD binary data.
 ## Features
 
 - NEXRAD Level 2 (Archive II Format) Processing
-	- Reflectivity Product Generation
-	- Velocity Product Generation
+	- Products 
+		- Reflectivity (REF)
+		- Velocity (VEL)
+		- Spectrum Width (SW)
+		- Correlation Coefficient (RHO)
+		- Differential Reflectivity (ZDR)
 
 #### Sample Image
 
