@@ -167,22 +167,22 @@ func Extract(f io.ReadSeeker) *Archive2 {
 
 				// move to the end of the message
 				msgBuf.Seek(MessageBodySize-Message3Length, io.SeekCurrent)
-			case 5:
-				m5 := Message5{}
-				binary.Read(msgBuf, binary.BigEndian, &m5.Message5Header)
-				ar2.VCP = &m5
+			// case 5:
+			// 	m5 := Message5{}
+			// 	binary.Read(msgBuf, binary.BigEndian, &m5.Message5Header)
+			// 	ar2.VCP = &m5
 
-				m5.ElevCuts = make([]Message5ElevCut, m5.NumElevCuts)
-				binary.Read(msgBuf, binary.BigEndian, &m5.ElevCuts)
+			// 	m5.ElevCuts = make([]Message5ElevCut, m5.NumElevCuts)
+			// 	binary.Read(msgBuf, binary.BigEndian, &m5.ElevCuts)
 
-				// move to the end of the message
-				msgBuf.Seek(MessageBodySize-int64(msgHeader.MessageSize), io.SeekCurrent)
-			case 15:
-				m15 := Message15{}
-				m15.Read(msgBuf)
+			// 	// move to the end of the message
+			// 	msgBuf.Seek(MessageBodySize-int64(msgHeader.MessageSize), io.SeekCurrent)
+			// case 15:
+			// 	m15 := Message15{}
+			// 	m15.Read(msgBuf)
 
-				// move to the end of the message
-				msgBuf.Seek(MessageBodySize-int64(msgHeader.MessageSize), io.SeekCurrent)
+			// 	// move to the end of the message
+			// 	msgBuf.Seek(MessageBodySize-int64(msgHeader.MessageSize), io.SeekCurrent)
 			case 31:
 				m31 := msg31(msgBuf)
 				// logrus.Trace(m31.Header.String())
