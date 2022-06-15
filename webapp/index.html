@@ -36,6 +36,9 @@
 <!-- <div>Note: May not work on Android</div>
 <br> -->
 <div id="scrollToDownloader" class="false-anchor">Download radar files</div>
+<br>
+<button onclick="window.location.href = 'map.html'">Map the images</button>
+<br>
 <script>
     document.getElementById('scrollToDownloader').addEventListener("click", function() {
         document.getElementById('radarDate').scrollIntoView({behavior: "smooth"});
@@ -105,7 +108,7 @@ Output: (More in DevTools Console)
 <div id="filenameList"></div>
 <br><br><br><br>
 
-<script src="xml2json.js"></script>
+<script src="/webapp/assets/js/xml2json.js"></script>
 <script>
     document.getElementById('today').addEventListener("click", function() {
         var yourDate = new Date();
