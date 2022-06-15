@@ -28,6 +28,7 @@ type Archive2 struct {
 	RadarStatus *Message2
 	//RadarPerformance is a container for the Message3 record from the LDM metadata
 	RadarPerformance *Message3
+	VCP              *Message5
 }
 
 // Extract data from a given archive 2 data file.
@@ -155,18 +156,41 @@ func Extract(f io.ReadSeeker) *Archive2 {
 			case 2:
 				m2 := Message2{}
 				binary.Read(msgBuf, binary.BigEndian, &m2)
-				msgBuf.Seek(MessageBodySize-Message2Length, io.SeekCurrent)
 				ar2.RadarStatus = &m2
+
+				// move to the end of the message
+				msgBuf.Seek(MessageBodySize-Message2Length, io.SeekCurrent)
 			case 3:
 				m3 := Message3{}
 				binary.Read(msgBuf, binary.BigEndian, &m3)
-				msgBuf.Seek(MessageBodySize-Message3Length, io.SeekCurrent)
 				ar2.RadarPerformance = &m3
+
+				// move to the end of the message
+				msgBuf.Seek(MessageBodySize-Message3Length, io.SeekCurrent)
+			case 5:
+				m5 := Message5{}
+				binary.Read(msgBuf, binary.BigEndian, &m5.Message5Header)
+				ar2.VCP = &m5
+
+				m5.ElevCuts = make([]Message5ElevCut, m5.NumElevCuts)
+				binary.Read(msgBuf, binary.BigEndian, &m5.ElevCuts)
+
+				// move to the end of the message
+				msgBuf.Seek(MessageBodySize-int64(msgHeader.MessageSize), io.SeekCurrent)
+			case 15:
+				m15 := Message15{}
+				m15.Read(msgBuf)
+
+				// move to the end of the message
+				msgBuf.Seek(MessageBodySize-int64(msgHeader.MessageSize), io.SeekCurrent)
 			case 31:
 				m31 := msg31(msgBuf)
 				// logrus.Trace(m31.Header.String())
 				ar2.ElevationScans[int(m31.Header.ElevationNumber)] = append(ar2.ElevationScans[int(m31.Header.ElevationNumber)], m31)
 			default:
+				if msgHeader.MessageType != 0 {
+					logrus.Debugf("ar2: unhandled message: %d", msgHeader.MessageType)
+				}
 				_, err := msgBuf.Seek(MessageBodySize, io.SeekCurrent)
 				if err != nil {
 					logrus.Panic("failed to seek forward header message size")
@@ -181,6 +205,10 @@ func Extract(f io.ReadSeeker) *Archive2 {
 }
 
 func (ar2 *Archive2) String() string {
+	return fmt.Sprintf("-- %s\n-- %s", ar2.VolumeHeader, ar2.RadarStatus)
+}
+
+func (ar2 *Archive2) Lon() string {
 	return fmt.Sprintf("-- %s\n-- %s", ar2.VolumeHeader, ar2.RadarStatus)
 }
 
