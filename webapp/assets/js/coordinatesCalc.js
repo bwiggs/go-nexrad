@@ -1,3 +1,7 @@
+/*
+* Credit for this code goes to https://www.gpsvisualizer.com/calculators
+* Original file is https://www.gpsvisualizer.com/calculators.js
+*/
 
 function DMS_to_Degrees(d,m,s,dir) {
 	var deg = parseFloat(Math.abs(d)) + parseFloat(Math.abs(m)/60) + parseFloat(Math.abs(s)/3600);
