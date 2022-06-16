@@ -5,6 +5,8 @@
 
 
     <script src="assets/js/coordinatesCalc.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/geolib@3.3.1/lib/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
     <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
 
@@ -50,6 +52,7 @@
     <button id="theSubmitter">Ok</button>
     <div id="statLat"></div>
     <div id="statLon"></div>
+    <div style="display: none" id="squareBounds"></div>
     <script>
         document.getElementById('jumpToStation').addEventListener("click", function() {
             document.getElementById('stationInput').value = "KLWX";
@@ -89,8 +92,34 @@
                     attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
                 }).addTo(map);
 
+                //var nexradLayer = 
+                //L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi", {
+                //    layers: 'nexrad-n0q-900913',
+                //    format: 'image/png',
+                //    transparent: true,
+                //    attribution: "Weather data © 2012 IEM Nexrad",
+                //    opacity: 0.6
+                //}).addTo(map);
+
+                //function wdgProduct(stationToShow, product, theOpacity) {
+                //    var urlToGet = `https://opengeo.ncep.noaa.gov/geoserver/${stationToShow.toLowerCase()}/${stationToShow.toLowerCase()}_${product}/ows?`;
+                //    var theService = `${stationToShow.toLowerCase()}_${product}`;
+                //    var wdgProductLayer = 
+                //    L.tileLayer.wms(urlToGet, {
+                //        SERVICE: 'WMS',
+                //        LAYERS: theService,
+                //        format: 'image/png',
+                //        transparent: true
+                //    });
+                //    wdgProductLayer.addTo(map);
+                //    wdgProductLayer.setOpacity(theOpacity);
+                //}
+                //wdgProduct("KLWX", "bref_raw", 0.6);
+
                 var allLayerGroup = L.layerGroup();
                 var imageLayerGroup = L.layerGroup().addTo(map);
+
+                //var marker = new L.Marker([38.9761, -77.4875]).addTo(map);
 
                 map.on('zoomstart', function() {
                     allLayerGroup.clearLayers();
@@ -113,7 +142,10 @@
                         icon: '<span class="fa fa-image" id="faImageSpan" style="line-height:28px"></span>',
                         stateName: 'add',
                         onClick: function(control) {
-                            showImage(stationLat, stationLon, URL.createObjectURL(document.getElementById("image-file").files[0]))
+                            //showImage(stationLat, stationLon, 'circleWithCenter.svg')
+                            // URL.createObjectURL(document.getElementById("image-file").files[0])
+                            // '../cmd/nexrad-render/radar.png'
+                            setImageFromCenter(950, URL.createObjectURL(document.getElementById("image-file").files[0]), stationLat, stationLon, 7)
                             control.state('remove');
                         }
                     }, {
@@ -127,26 +159,42 @@
                         //tagName: 'a'
                 }).addTo(map);
 
-                function showImage(centerLat, centerLon, imagePath) {
-                    // 315, 135
-                    //var lightningLayer = 
-                    //L.tileLayer('https://tiles.lightningmaps.org/?x={x}&y={y}&z={z}&s=256', {
-                    //}).addTo(lightningLayerGroup);
-                    //setImageFromCenter(950, '/weather/nexrad/radar.png');
+                function setImageFromCenter(zoomLevel, imagePath, lat, lng, zoom) {
+                    var initMapCenter = map.getCenter();
+                    var initMapZoom = map.getZoom();
+                    var initMapWidth = document.getElementById("map").style.width;
+                    var initMapHeight = document.getElementById("map").style.height;
 
-                    var distance = "460";
+                    //map.setView([lat, lng], zoom, {
+                    //    "animate": false
+                    //});
 
-                    var NWcoords = Point_At_Distance_And_Bearing(centerLat, centerLon, distance, "315");
-                    var SEcoords = Point_At_Distance_And_Bearing(centerLat, centerLon, distance, "135");
+                    // sets the map's width and height to be the same as the user's value
+                    $("#map").css("width", zoomLevel + "px");
+                    $("#map").css("height", zoomLevel + "px");
+                    map.invalidateSize();
 
-                    var NWlat = NWcoords[0];
-                    // var NWlon = NWcoords[1] + .3;
-                    var NWlon = NWcoords[1];
-                    var SElat = SEcoords[0];
-                    var SElon = SEcoords[1];
+                    // sets the image overlay to the map's bounds
+                    var squareBoundsElem = document.getElementById('squareBounds');
+                    if (squareBoundsElem.innerHTML == '') {
+                        var theSquareBounds = map.getBounds();
+                        squareBoundsElem.innerHTML = JSON.stringify(theSquareBounds);
+                        L.imageOverlay(imagePath, theSquareBounds).addTo(imageLayerGroup);
+                    } else if (squareBoundsElem.innerHTML != '') {
+                        var parsedStoredBounds = JSON.parse(squareBoundsElem.innerHTML);
+                        console.log(parsedStoredBounds)
+                        var theParsedBounds = [[parsedStoredBounds._southWest.lat, parsedStoredBounds._southWest.lng], [parsedStoredBounds._northEast.lat, parsedStoredBounds._northEast.lng]]
+                        L.imageOverlay(imagePath, theParsedBounds).addTo(imageLayerGroup);
+                    }
 
-                    var sussyballs = [[NWlat, NWlon], [SElat, SElon]]
-                    L.imageOverlay(imagePath, sussyballs).addTo(imageLayerGroup);
+                    // resets the map's initial dimensions
+                    $("#map").css("height", initMapHeight);
+                    $("#map").css("width", "auto");
+                    map.invalidateSize();
+
+                    //map.setView(initMapCenter, initMapZoom, {
+                    //    "animate": false
+                    //});
                 }
             })
         }); 
