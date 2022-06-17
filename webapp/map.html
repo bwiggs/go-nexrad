@@ -22,7 +22,7 @@
     <style>
         #map {
             width: auto;
-            height: 500px;
+            height: 400px;
             position: absolute;
             text-align: center;
             left: 5%;
@@ -52,7 +52,7 @@
     <button id="theSubmitter">Ok</button>
     <div id="statLat"></div>
     <div id="statLon"></div>
-    <div style="display: none" id="squareBounds"></div>
+    <div id="squareBounds"></div>
     <script>
         document.getElementById('jumpToStation').addEventListener("click", function() {
             document.getElementById('stationInput').value = "KLWX";
@@ -177,14 +177,15 @@
 
                     // sets the image overlay to the map's bounds
                     var squareBoundsElem = document.getElementById('squareBounds');
-                    var theSquareBounds = map.getBounds();
-                    squareBoundsElem.innerHTML = JSON.stringify(theSquareBounds);
-                    var parsedStoredBounds = JSON.parse(squareBoundsElem.innerHTML);
-                    var boundsText = `lat_min = '${parsedStoredBounds._southWest.lat}'\nlat_max = '${parsedStoredBounds._northEast.lat}'\nlon_min = '${parsedStoredBounds._southWest.lng}'\nlon_max = '${parsedStoredBounds._northEast.lng}'`;
-                    console.log(boundsText);
                     if (squareBoundsElem.innerHTML == '') {
+                        map.setView([lat, lng], zoom, {"animate": false});
+                        var theSquareBounds = map.getBounds();
+                        squareBoundsElem.innerHTML = JSON.stringify(theSquareBounds);
                         L.imageOverlay(imagePath, theSquareBounds).addTo(imageLayerGroup);
+                        map.setView(initMapCenter, initMapZoom, {"animate": false});
                     } else if (squareBoundsElem.innerHTML != '') {
+                        var parsedStoredBounds = JSON.parse(squareBoundsElem.innerHTML);
+                        console.log(parsedStoredBounds)
                         var theParsedBounds = [[parsedStoredBounds._southWest.lat, parsedStoredBounds._southWest.lng], [parsedStoredBounds._northEast.lat, parsedStoredBounds._northEast.lng]]
                         L.imageOverlay(imagePath, theParsedBounds).addTo(imageLayerGroup);
                     }
@@ -199,7 +200,59 @@
                     //});
                 }
             })
-        }); 
+        });
+
+
+
+
+
+
+
+
+        /*
+        * THIS IS ALL TEST CODE TO GENERATE A JSON FILE
+        * https://steepatticstairs.github.io/weather/json/boundingBoxes.json
+        */
+        function makeObjectOfBBOX() {
+            var statArray = [];
+            var fullObj = {};
+            $.getJSON('https://steepatticstairs.github.io/weather/json/wdg_radar-stations_05042022.json', function(data) {
+                var i = 1;
+                function myLoop() {
+                    setTimeout(function() {
+                        var stationType = data.features[i].properties.stationType;
+                        if (stationType == "WSR-88D") {
+                            var currentStation = data.features[i].properties.id;
+                            statArray.push(currentStation);
+                            document.getElementById('stationInput').value = currentStation;
+                            $('#theSubmitter').trigger('click');
+                            //setImageFromCenter(950, 'radar.png', stationLat, stationLon, 7);
+                            setTimeout(() => {
+                                var parsedStoredBounds = JSON.parse(document.getElementById('squareBounds').innerHTML);
+                                var lat_min = parsedStoredBounds._southWest.lat
+                                var lat_max = parsedStoredBounds._northEast.lat
+                                var lon_min = parsedStoredBounds._southWest.lng
+                                var lon_max = parsedStoredBounds._northEast.lng
+
+                                fullObj[currentStation] = [lat_min, lat_max, lon_min, lon_max];
+                                console.log(fullObj)
+                            }, 1000);
+                        }
+                        i++;
+                        if (i < 208) {
+                            console.log(i)
+                            myLoop();
+                        }
+                    }, 2000)
+                }
+                myLoop();
+                //console.log(statArray.sort())
+                if (i == 208) {
+                    //console.log(f)
+                }
+            });
+        }
+        //makeObjectOfBBOX();
     </script>
 </body>
 </html>
