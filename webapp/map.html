@@ -66,6 +66,7 @@
         // 38.9761
 		// -77.4875
         document.getElementById('theSubmitter').addEventListener("click", function() {
+            document.getElementById('squareBounds').innerHTML = '';
             $.getJSON('https://steepatticstairs.github.io/weather/json/radarStations.json', function(data) {
                 var formattedStation = document.getElementById('stationInput').value;
                 formattedStation = formattedStation.toUpperCase().replace(/ /g, '');
@@ -176,13 +177,14 @@
 
                     // sets the image overlay to the map's bounds
                     var squareBoundsElem = document.getElementById('squareBounds');
+                    var theSquareBounds = map.getBounds();
+                    squareBoundsElem.innerHTML = JSON.stringify(theSquareBounds);
+                    var parsedStoredBounds = JSON.parse(squareBoundsElem.innerHTML);
+                    var boundsText = `lat_min = '${parsedStoredBounds._southWest.lat}'\nlat_max = '${parsedStoredBounds._northEast.lat}'\nlon_min = '${parsedStoredBounds._southWest.lng}'\nlon_max = '${parsedStoredBounds._northEast.lng}'`;
+                    console.log(boundsText);
                     if (squareBoundsElem.innerHTML == '') {
-                        var theSquareBounds = map.getBounds();
-                        squareBoundsElem.innerHTML = JSON.stringify(theSquareBounds);
                         L.imageOverlay(imagePath, theSquareBounds).addTo(imageLayerGroup);
                     } else if (squareBoundsElem.innerHTML != '') {
-                        var parsedStoredBounds = JSON.parse(squareBoundsElem.innerHTML);
-                        console.log(parsedStoredBounds)
                         var theParsedBounds = [[parsedStoredBounds._southWest.lat, parsedStoredBounds._southWest.lng], [parsedStoredBounds._northEast.lat, parsedStoredBounds._northEast.lng]]
                         L.imageOverlay(imagePath, theParsedBounds).addTo(imageLayerGroup);
                     }
