@@ -8,6 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/geolib@3.3.1/lib/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
+    <script src="assets/js/tiff.js"></script>
+
     <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css" />
@@ -40,6 +42,24 @@
         }
         .icon-selected {
             color:rgb(0, 132, 255);
+        }
+        /* Leaflet crispness override 
+        https://stackoverflow.com/a/69032144 */
+        .leaflet-container .leaflet-overlay-pane svg,
+        .leaflet-container .leaflet-marker-pane img,
+        .leaflet-container .leaflet-shadow-pane img,
+        .leaflet-container .leaflet-tile-pane img,
+        .leaflet-container img.leaflet-image-layer {
+            max-width: none !important;
+            /* Preserve crisp pixels with scaled up images */
+            image-rendering: optimizeSpeed;             /* Legal fallback */
+            image-rendering: -moz-crisp-edges;          /* Firefox        */
+            image-rendering: -o-crisp-edges;            /* Opera          */
+            image-rendering: -webkit-optimize-contrast; /* Safari         */
+            image-rendering: optimize-contrast;         /* CSS3 Proposed  */
+            image-rendering: crisp-edges;               /* CSS4 Proposed  */
+            image-rendering: pixelated;                 /* CSS4 Proposed  */
+            -ms-interpolation-mode: nearest-neighbor;   /* IE8+           */
         }
     </style>
 </head>
@@ -146,6 +166,23 @@
                             //showImage(stationLat, stationLon, 'circleWithCenter.svg')
                             // URL.createObjectURL(document.getElementById("image-file").files[0])
                             // '../cmd/nexrad-render/radar.png'
+
+                            /*
+                            var xhr = new XMLHttpRequest();
+                            xhr.responseType = 'arraybuffer';
+                            xhr.open('GET', "KLWX_L2_BREF_RAW_20220619_024704.tif");
+                            xhr.onload = function (e) {
+                                var tiff = new Tiff({buffer: xhr.response});
+                                var canvas = tiff.toCanvas();
+                                canvas.toBlob(function(blob) {
+                                    const newImg = document.createElement('img');
+                                    const url = URL.createObjectURL(blob);
+                                    setImageFromCenter(950, url, stationLat, stationLon, 7)
+                                })
+                            };
+                            xhr.send();
+                            */
+                            // https://mrms.ncep.noaa.gov/data/RIDGEII/L2/KLWX/BREF_RAW/
                             setImageFromCenter(950, URL.createObjectURL(document.getElementById("image-file").files[0]), stationLat, stationLon, 7)
                             control.state('remove');
                         }
