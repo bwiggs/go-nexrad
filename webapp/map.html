@@ -172,12 +172,14 @@
                             // '../cmd/nexrad-render/radar.png'
 
                             // https://mrms.ncep.noaa.gov/data/RIDGEII/L2/KLWX/BREF_RAW/
-                            function un_gzip_uploaded_file() {
-                                var reader = new FileReader();
-                                reader.onload = function(){
-                                    // https://stackoverflow.com/a/22675494
-                                    var arrayBuffer = this.result;
-                                    console.log(arrayBuffer);
+                            function un_gzip_uploaded_file(file) {
+                                // https://stackoverflow.com/a/22675494
+                                var urlOfTheFile = file;
+                                fetch(urlOfTheFile)
+                                .then(res => res.arrayBuffer())
+                                .then(someBuffer => {
+                                    var arrayBuffer = someBuffer;
+                                    //console.log(arrayBuffer);
                                     // Get datastream as Array, for example:
                                     var charData = arrayBuffer;
                                     // Turn number array into byte-array
@@ -203,12 +205,16 @@
                                         })
                                     };
                                     xhr.send();
-                                }
-                                reader.readAsArrayBuffer(document.getElementById("image-file").files[0]);
+                                });
                             }
                             var blobUrlElem = document.getElementById('blobURL');
                             if (blobUrlElem.innerHTML == '') {
-                                un_gzip_uploaded_file()
+                                // URL.createObjectURL(document.getElementById("image-file").files[0])
+                                // var proxy = "https://salty-citadel-44916.herokuapp.com/";
+                                // var proxy = 'https://secret-retreat-45871.herokuapp.com/'
+                                var proxy = "https://circumvent-cors.herokuapp.com/";
+                                var fileUrl = 'https://mrms.ncep.noaa.gov/data/RIDGEII/L2/KBLX/BREF_RAW/KBLX_L2_BREF_RAW_20220619_182836.tif.gz'
+                                un_gzip_uploaded_file(proxy + fileUrl)
                             } else if (blobUrlElem.innerHTML != '') {
                                 setImageFromCenter(950, blobUrlElem.innerHTML, stationLat, stationLon, 7)
                             }
