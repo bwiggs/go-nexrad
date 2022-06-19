@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/geolib@3.3.1/lib/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
+    <script src="assets/js/pako.min.js"></script>
     <script src="assets/js/tiff.js"></script>
 
     <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
@@ -65,14 +66,16 @@
 </head>
 
 <body>
-    <input id="image-file" type="file" accept="image/*"/>
+    <!-- <input id="image-file" type="file" accept="image/*"/> -->
+    <input id="image-file" type="file" />
     <div>Station: (<a class="false-anchor" id="jumpToStation">KLWX</a>)</div>
     <input id="stationInput">
     <br>
     <button id="theSubmitter">Ok</button>
     <div id="statLat"></div>
     <div id="statLon"></div>
-    <div id="squareBounds"></div>
+    <div style="display: none" id="squareBounds"></div>
+    <div style="display: none" id="blobURL"></div>
     <script>
         document.getElementById('jumpToStation').addEventListener("click", function() {
             document.getElementById('stationInput').value = "KLWX";
@@ -87,6 +90,7 @@
 		// -77.4875
         document.getElementById('theSubmitter').addEventListener("click", function() {
             document.getElementById('squareBounds').innerHTML = '';
+            document.getElementById('blobURL').innerHTML = '';
             $.getJSON('https://steepatticstairs.github.io/weather/json/radarStations.json', function(data) {
                 var formattedStation = document.getElementById('stationInput').value;
                 formattedStation = formattedStation.toUpperCase().replace(/ /g, '');
@@ -167,23 +171,48 @@
                             // URL.createObjectURL(document.getElementById("image-file").files[0])
                             // '../cmd/nexrad-render/radar.png'
 
-                            /*
-                            var xhr = new XMLHttpRequest();
-                            xhr.responseType = 'arraybuffer';
-                            xhr.open('GET', "KLWX_L2_BREF_RAW_20220619_024704.tif");
-                            xhr.onload = function (e) {
-                                var tiff = new Tiff({buffer: xhr.response});
-                                var canvas = tiff.toCanvas();
-                                canvas.toBlob(function(blob) {
-                                    const newImg = document.createElement('img');
-                                    const url = URL.createObjectURL(blob);
-                                    setImageFromCenter(950, url, stationLat, stationLon, 7)
-                                })
-                            };
-                            xhr.send();
-                            */
                             // https://mrms.ncep.noaa.gov/data/RIDGEII/L2/KLWX/BREF_RAW/
-                            setImageFromCenter(950, URL.createObjectURL(document.getElementById("image-file").files[0]), stationLat, stationLon, 7)
+                            function un_gzip_uploaded_file() {
+                                var reader = new FileReader();
+                                reader.onload = function(){
+                                    // https://stackoverflow.com/a/22675494
+                                    var arrayBuffer = this.result;
+                                    console.log(arrayBuffer);
+                                    // Get datastream as Array, for example:
+                                    var charData = arrayBuffer;
+                                    // Turn number array into byte-array
+                                    var binData = new Uint8Array(charData);
+                                    // Pako magic
+                                    var data = pako.inflate(binData);
+                                    // Output to console
+                                    var blob = new Blob([new Uint8Array(data).buffer])
+                                    var blobURL = URL.createObjectURL(blob)
+                                    //console.log(blobURL);
+
+                                    var xhr = new XMLHttpRequest();
+                                    xhr.responseType = 'arraybuffer';
+                                    xhr.open('GET', blobURL);
+                                    xhr.onload = function (e) {
+                                        var tiff = new Tiff({buffer: xhr.response});
+                                        var canvas = tiff.toCanvas();
+                                        canvas.toBlob(function(blob) {
+                                            const newImg = document.createElement('img');
+                                            const url2 = URL.createObjectURL(blob);
+                                            document.getElementById('blobURL').innerHTML = url2;
+                                            setImageFromCenter(950, document.getElementById('blobURL').innerHTML, stationLat, stationLon, 7)
+                                        })
+                                    };
+                                    xhr.send();
+                                }
+                                reader.readAsArrayBuffer(document.getElementById("image-file").files[0]);
+                            }
+                            var blobUrlElem = document.getElementById('blobURL');
+                            if (blobUrlElem.innerHTML == '') {
+                                un_gzip_uploaded_file()
+                            } else if (blobUrlElem.innerHTML != '') {
+                                setImageFromCenter(950, blobUrlElem.innerHTML, stationLat, stationLon, 7)
+                            }
+                            //setImageFromCenter(950, imageURLToDisplay, stationLat, stationLon, 7)
                             control.state('remove');
                         }
                     }, {
