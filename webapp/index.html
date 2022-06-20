@@ -1,0 +1,238 @@
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/downloadjs/1.4.8/download.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs@3.1.1/umd/comlink.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bluebird/3.5.4/bluebird.min.js"></script>
+
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.1.1/dropzone.css">
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.1.1/basic.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.1.1/dropzone.js"></script>
+
+<style>
+    #filenameList {
+        width: 330px;
+        height: 400px;
+        left: 0;
+        overflow: auto;
+        border: 1px solid rgb(0, 0, 0);
+        padding: 2px;
+        text-align: justify;
+        background: transparent;
+    }
+    .false-anchor {
+        cursor: pointer;
+        text-decoration: underline;
+        color:rgb(0, 0, 238);
+    }
+</style>
+</head>
+<body>
+<h2>Using WebAssembly to convert NEXRAD L2 files to PNG / SVG</h2>
+<!-- <div>Note: May not work on Android</div>
+<br> -->
+<div id="scrollToDownloader" class="false-anchor">Download radar files</div>
+<br>
+<button onclick="window.location.href = 'map.html'">Map the images</button>
+<br>
+<script>
+    document.getElementById('scrollToDownloader').addEventListener("click", function() {
+        document.getElementById('radarDate').scrollIntoView({behavior: "smooth"});
+    })
+</script>
+<br>
+<div>Type your arguments here.</div>
+<div style="font-size: 12px">No quotes, add spaces separating, e.g.:</div>
+<code id="userTypedArgs">-p vel -e 2 -s 2048 -v png</code>
+<br>
+<input type="text" id="argumen">
+<button id="okBtn">Ok</button>
+<script>
+    document.getElementById('okBtn').addEventListener("click", function () {
+        document.getElementById('userTypedArgs').innerHTML = document.getElementById('argumen').value
+    })
+</script>
+<br><br>
+<form action=""
+        class="dropzone"
+        id="my-drop-zone"></form>
+
+<textarea id="outtext" rows=20 cols=80>
+Output: (More in DevTools Console)
+</textarea>
+
+<div>
+    Using the code from <a href="https://github.com/bwiggs/go-nexrad">go-nexrad</a>.
+</div>
+<br>
+<div>
+    Credit to <a href="https://github.com/wcchoi/go-wasm-pdfcpu">https://github.com/wcchoi/go-wasm-pdfcpu</a> for most of this<br>
+    code that runs a CLI go program with WASM on a website.
+</div>
+<br><br>
+<code>
+    nexrad-render generates products from NEXRAD Level 2 (archive 2) data files.
+    <br><br>
+    Usage:<br>
+    &nbsp;&nbsp;&nbsp;nexrad-render [flags]
+    <br><br>
+    Flags:<br>
+    &nbsp;&nbsp;&nbsp;-c, --color-scheme string   color scheme to use. noaa, scope, scope-classic, pink, clean-air (default "noaa")<br>
+    &nbsp;&nbsp;&nbsp;-d, --directory string      directory of L2 files to process<br>
+    &nbsp;&nbsp;&nbsp;-e, --elevation int         1-15 (default 1)<br>
+    <!-- &nbsp;&nbsp;&nbsp;-f, --file string           archive 2 file to process<br> -->
+    &nbsp;&nbsp;&nbsp;-h, --help                  help for nexrad-render<br>
+    &nbsp;&nbsp;&nbsp;-L, --label                 label the image with station and date<br>
+    &nbsp;&nbsp;&nbsp;-l, --log-level string      log level, debug, info, warn, error (default "warn")<br>
+    &nbsp;&nbsp;&nbsp;-o, --output string         output file (default "radar.png")<br>
+    &nbsp;&nbsp;&nbsp;-p, --product string        product to produce. ex: ref, vel, sw, rho (default "ref")<br>
+    &nbsp;&nbsp;&nbsp;-s, --size int32            size in pixel of the output image (default 1024)<br>
+    &nbsp;&nbsp;&nbsp;-t, --threads int           threads (default 8)<br>
+    &nbsp;&nbsp;&nbsp;-v, --vectorize string      ouput image format. png, svg, svgtest (default "png")<br>
+</code>
+<br>
+<label for="radarDate">Date: (<a id="today" class="false-anchor">Today</a>)</label>
+<br>
+<input type="date" id="radarDate">
+<br><br>
+<label for="station">Station:</label>
+<br>
+<input id="station">
+<br><br>
+<button id="submitDate">Submit</button>
+<br><br>
+<div id="filenameList"></div>
+<br><br><br><br>
+
+<script src="assets/js/xml2json.js"></script>
+<script>
+    document.getElementById('today').addEventListener("click", function() {
+        var yourDate = new Date();
+        document.getElementById('radarDate').value = yourDate.toISOString().split('T')[0];
+    });
+
+    // var proxy = "https://salty-citadel-44916.herokuapp.com/";
+    // var proxy = 'https://secret-retreat-45871.herokuapp.com/'
+    var proxy = "https://circumvent-cors.herokuapp.com/";
+
+    var dateField = document.getElementById('radarDate')
+    var stationField = document.getElementById('station')
+    var filenameTextArea = document.getElementById('filenameList')
+    document.getElementById('submitDate').addEventListener("click", function() {
+        var year = dateField.value.substring(0, 4)
+        var month = dateField.value.substring(5, 7)
+        var day = dateField.value.substring(8, 10)
+        var stationToGet = stationField.value.toUpperCase().replace(/ /g, '')
+        var fullURL = "https://noaa-nexrad-level2.s3.amazonaws.com/?list-type=2&delimiter=%2F&prefix=" + year + "%2F" + month + "%2F" + day + "%2F" + stationToGet + "%2F"
+        $.get(proxy + fullURL, function (data) {
+            var dataToWorkWith = JSON.stringify(xmlToJson(data)).replace(/#/g, 'HASH')
+            dataToWorkWith = JSON.parse(dataToWorkWith)
+            //console.log(dataToWorkWith)
+            var filenameKey = dataToWorkWith.ListBucketResult.Contents
+            var filenameArray = [];
+            for (var n = 0; n < filenameKey.length; n++) {
+                //console.log(filenameKey[n].Key.HASHtext)
+                var theText = filenameKey[n].Key.HASHtext.slice(16)
+                var individualFileURL = `https://noaa-nexrad-level2.s3.amazonaws.com/${year}/${month}/${day}/${stationToGet}/${theText}`
+                filenameArray.push(theText)
+                var a = document.createElement('a');
+                var br = document.createElement('br');
+                var linkText = document.createTextNode(theText);
+                a.appendChild(linkText);
+                a.title = theText;
+                a.href = individualFileURL;
+                filenameTextArea.appendChild(a);
+                filenameTextArea.appendChild(br);
+                //filenameTextArea.innerHTML += `<a href='${individualFileURL}'></a>${theText}<br>`
+            }
+            //console.log(filenameArray)
+        })
+    })
+</script>
+
+<script>
+(async function() {
+    if (!WebAssembly.instantiateStreaming) { // polyfill
+        WebAssembly.instantiateStreaming = async (resp, importObject) => {
+            const source = await (await resp).arrayBuffer()
+                return await WebAssembly.instantiate(source, importObject)
+        }
+    }
+    Dropzone.autoDiscover = false;
+
+    let myDropZone = new Dropzone('#my-drop-zone', {
+        url: '#',
+        //acceptedFiles: ".pdf",
+        maxFiles: 1,
+        autoProcessQueue: false, // don't do real uploading (HTTP POST)
+        addRemoveLinks: true,
+        // previewTemplate: document.querySelector('#preview-template').innerHTML,
+        maxFilesize: Number.MAX_SAFE_INTEGER, // i.e. do not impose file size limit on DropZone, because we are not uploading any file
+        accept: function(file, done) {
+            console.log(file)
+            done()
+            processPDF(this.getAcceptedFiles()[0])
+        }
+    });
+
+    document.querySelector('div.dz-message span').innerText = "Drop NEXRAD file here or click to select, only 1 file supported"
+
+    let GoWorker = Comlink.proxy(new Worker('worker.js'));
+    console.log("pre inst");
+    let worker = await new GoWorker();
+    console.log("post inst");
+
+    let outtext = document.querySelector("#outtext");
+
+    async function processPDF(file) {
+        let st = Date.now();
+        outtext.value += `Reading file ${file.name} ...\n`;
+        let reader = new FileReader();
+        async function callback(e) {
+            outtext.value += `DONE Reading file (took: ${Date.now() - st} ms)\n`;
+
+            let buffer = e.target.result.slice();
+
+            st = Date.now();
+            outtext.value += "Parsing file...\n";
+            // FIXME: extra copying of buffer
+            buffer = e.target.result.slice();
+            try {
+                result = await worker.extractPage(buffer, document.getElementById('argumen').value);
+                outtext.value += `DONE Parsing (took: ${Date.now() - st} ms)...\n`;
+                outtext.value += `-----------\n\n`;
+
+                var doesItContain = []
+                var stringToCheck = document.getElementById('argumen').value.split(' ');
+                for (var i = 0; i < stringToCheck.length; i++) {
+                    doesItContain.push(stringToCheck[i])
+                }
+                if (doesItContain.includes("png")) {
+                    download(new Blob([result]), 'radar.png');
+                } else if (doesItContain.includes("svg")) {
+                    download(new Blob([result]), 'radar.svg.gz');
+                } else if (doesItContain.includes("svgtest")) {
+                    download(new Blob([result]), 'TESTradar.svg');
+                } else {
+                    download(new Blob([result]), 'radar.png');
+                }
+            } catch(e) {
+                console.log("caught in index.html!", e);
+                outtext.value += `Error in parsing (took: ${Date.now() - st} ms)...\n`;
+                outtext.value += e + '\n';
+                outtext.value += `-----------\n\n`;
+
+            }
+        }
+        reader.onload = callback;
+        reader.readAsArrayBuffer(file);
+
+    }
+})();
+</script>
+</body>
+</html>

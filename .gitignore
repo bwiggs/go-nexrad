@@ -1,4 +1,7 @@
 data/
 vendor/
 *.png
+*.svg
 nids/samples
+testdata/
+.DS_Store
