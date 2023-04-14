@@ -44,7 +44,6 @@ var product string
 var imageSize int32
 var elevation int
 var runners int
-var products []string
 
 var colorSchemes map[string]map[string]func(float32) color.Color
 
@@ -59,8 +58,6 @@ func init() {
 	cmd.PersistentFlags().IntVarP(&elevation, "elevation", "e", 1, "1-15")
 	cmd.PersistentFlags().StringVarP(&directory, "directory", "d", "", "directory of L2 files to process")
 	cmd.PersistentFlags().BoolVarP(&renderLabel, "label", "L", false, "label the image with station and date")
-
-	products = []string{"ref", "vel", "sw", "rho"}
 
 	colorSchemes = make(map[string]map[string]func(float32) color.Color)
 	colorSchemes["ref"] = map[string]func(float32) color.Color{
@@ -105,12 +102,12 @@ func run(cmd *cobra.Command, args []string) {
 	inputFile = args[0]
 
 	if _, ok := colorSchemes[product][colorScheme]; !ok {
-		logrus.Fatal(fmt.Sprintf("unsupported %s colorscheme %s", product, colorScheme))
+		logrus.Fatalf("unsupported %s colorscheme %s\n", product, colorScheme)
 	}
 
 	lvl, err := logrus.ParseLevel(logLevel)
 	if err != nil {
-		logrus.Fatalf("failed to parse level: %s", err)
+		logrus.Fatalf("failed to parse level: %s\n", err)
 	}
 	logrus.SetLevel(lvl)
 
@@ -132,7 +129,7 @@ func run(cmd *cobra.Command, args []string) {
 func animate(dir, outdir, prod string) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Fatalln(err)
 	}
 
 	// create the output dir
@@ -232,26 +229,14 @@ func render(out string, radials []*archive2.Message31, label string) {
 		gc.SetLineWidth(gateWidthPx + 1)
 		gc.SetLineCap(draw2d.ButtCap)
 
-		var gates []float32
-		switch product {
-		case "vel":
-			gates = radial.VelocityData.ScaledData()
-		case "sw":
-			gates = radial.SwData.ScaledData()
-		case "phi":
-			gates = radial.PhiData.ScaledData()
-		case "rho":
-			gates = radial.RhoData.ScaledData()
-		case "zdr":
-			gates = radial.ZdrData.ScaledData()
-		case "cfp":
-			gates = radial.CfpData.ScaledData()
-		default:
-			gates = radial.ReflectivityData.ScaledData()
+		gates, err := radial.ScaledDataForProduct(product)
+
+		if err != nil {
+			logrus.Fatalln(err)
 		}
 
-		numGates := len(gates)
-		for i, v := range gates {
+		numGates := len(*gates)
+		for i, v := range *gates {
 			if v != archive2.MomentDataBelowThreshold {
 
 				// valueDist[v] += 1

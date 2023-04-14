@@ -27,6 +27,8 @@ var (
 	runners    int
 )
 
+var validProducts = map[string]struct{}{"ref": {}, "vel": {}, "sw": {}, "rho": {}}
+
 func init() {
 	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "radar.csv", "output file")
 	cmd.PersistentFlags().StringVarP(&product, "product", "p", "ref", "product to produce. ex: ref, vel, sw, rho")
@@ -46,6 +48,18 @@ func main() {
 func run(cmd *cobra.Command, args []string) {
 	inputFile := args[0]
 
+	lvl, err := logrus.ParseLevel(logLevel)
+
+	if err != nil {
+		logrus.Fatalf("failed to parse level: %s", err)
+	}
+
+	logrus.SetLevel(lvl)
+
+	if _, ok := validProducts[product]; !ok {
+		logrus.Fatalf("invalid product %s", product)
+	}
+
 	f, err := os.Open(inputFile)
 
 	if err != nil {
@@ -62,7 +76,7 @@ func run(cmd *cobra.Command, args []string) {
 	radarRelativePoints := make([]*DataPoint, 0)
 
 	for _, radial := range radials {
-		points := radialToRelativePoints(radial)
+		points := radialToRelativePoints(radial, product)
 
 		radarRelativePoints = append(radarRelativePoints, points...)
 	}
@@ -81,15 +95,13 @@ func run(cmd *cobra.Command, args []string) {
 	ltpToEcef, err := ctx.CreateCRS2CRS(ltp, ecef)
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		logrus.Fatalln(err)
 	}
 
 	ecefToGeographic, err := ctx.CreateCRS2CRS(ecef, geographic)
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		logrus.Fatalln(err)
 	}
 
 	geographicPoints := make([]*DataPoint, 0)
@@ -103,8 +115,7 @@ func run(cmd *cobra.Command, args []string) {
 	file, err := os.Create(outputFile)
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		logrus.Fatalln(err)
 	}
 
 	defer file.Close()
@@ -117,10 +128,15 @@ func run(cmd *cobra.Command, args []string) {
 	}
 }
 
-func radialToRelativePoints(radial *archive2.Message31) []*DataPoint {
+func radialToRelativePoints(radial *archive2.Message31, product string) []*DataPoint {
 	azimuth := radial.Header.AzimuthAngle
 	elevation := radial.Header.ElevationAngle
-	gates := radial.ReflectivityData.ScaledData()
+
+	gates, err := radial.ScaledDataForProduct(product)
+
+	if err != nil {
+		logrus.Fatalln(err)
+	}
 
 	firstGateDist := float64(radial.ReflectivityData.DataMomentRange)
 	gateIncrement := float64(radial.ReflectivityData.DataMomentRangeSampleInterval)
@@ -140,7 +156,7 @@ func radialToRelativePoints(radial *archive2.Message31) []*DataPoint {
 
 	relativePoints := make([]*DataPoint, 0)
 
-	for _, gate := range gates {
+	for _, gate := range *gates {
 
 		if gate == archive2.MomentDataBelowThreshold || gate == archive2.MomentDataFolded {
 			r += gateIncrement
@@ -166,15 +182,13 @@ func relativePointToGeographicPoint(ltpToEcef *proj.PJ, ecefToGeographic *proj.P
 	ecef_x, ecef_y, ecef_z, _, err := ltpToEcef.Trans(proj.Fwd, relativePoint.U, relativePoint.V, relativePoint.W, 0)
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		logrus.Fatalln(err)
 	}
 
 	lon, lat, alt, _, err := ecefToGeographic.Trans(proj.Fwd, ecef_x, ecef_y, ecef_z, 0)
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		logrus.Fatalln(err)
 	}
 
 	return &DataPoint{

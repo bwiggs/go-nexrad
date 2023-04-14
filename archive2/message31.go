@@ -33,6 +33,37 @@ type Message31 struct {
 	CfpData          *DataMoment // CfpData (Clutter Filter Power Removed)
 }
 
+func (m *Message31) ScaledDataForProduct(product string) (*[]float32, error) {
+	var moment *DataMoment
+
+	switch product {
+	case "ref":
+		moment = m.ReflectivityData
+	case "vel":
+		moment = m.VelocityData
+	case "sw":
+		moment = m.SwData
+	case "phi":
+		moment = m.PhiData
+	case "rho":
+		moment = m.RhoData
+	case "zdr":
+		moment = m.ZdrData
+	case "cfp":
+		moment = m.CfpData
+	default:
+		return nil, fmt.Errorf("unexpected product %s", product)
+	}
+
+	if moment == nil {
+		return nil, fmt.Errorf("nil data moment for %s", product)
+	}
+
+	gates := moment.ScaledData()
+
+	return &gates, nil
+}
+
 func (h Message31Header) String() string {
 	return fmt.Sprintf("Message 31 - %s @ %v deg=%.2f tilt=%.2f",
 		string(h.RadarIdentifier[:]),
