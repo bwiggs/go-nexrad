@@ -2,3 +2,4 @@ data/
 vendor/
 *.png
 nids/samples
+*.csv
