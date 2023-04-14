@@ -121,7 +121,7 @@ func run(cmd *cobra.Command, args []string) {
 	defer file.Close()
 
 	// Header
-	file.WriteString("latitude,longitude,reflectivity\n")
+	file.WriteString("latitude,longitude,value\n")
 
 	for _, geoPoint := range geographicPoints {
 		file.WriteString(geoPoint.ToRow())
