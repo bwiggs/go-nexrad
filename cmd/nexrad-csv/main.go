@@ -7,9 +7,9 @@ import (
 	"runtime"
 
 	"github.com/bwiggs/go-nexrad/archive2"
-	proj "github.com/pebbe/proj/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	proj "github.com/twpayne/go-proj/v10"
 )
 
 var cmd = &cobra.Command{
@@ -60,7 +60,7 @@ func run(cmd *cobra.Command, args []string) {
 		logrus.Fatalf("invalid product %s", product)
 	}
 
-	f, err := os.Open(inputFile) 
+	f, err := os.Open(inputFile)
 
 	if err != nil {
 		logrus.Error(err)
@@ -81,8 +81,6 @@ func run(cmd *cobra.Command, args []string) {
 		radarRelativePoints = append(radarRelativePoints, points...)
 	}
 
-	ctx := proj.NewContext()
-
 	radar_lat := radials[0].VolumeData.Lat
 	radar_lon := radials[0].VolumeData.Long
 
@@ -92,13 +90,13 @@ func run(cmd *cobra.Command, args []string) {
 
 	ecef := "+proj=geocent +datum=WGS84 +units=m +no_defs +type=crs"
 
-	ltpToEcef, err := ctx.CreateCRS2CRS(ltp, ecef)
+	ltpToEcef, err := proj.NewCRSToCRS(ltp, ecef, nil)
 
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
-	ecefToGeographic, err := ctx.CreateCRS2CRS(ecef, geographic)
+	ecefToGeographic, err := proj.NewCRSToCRS(ecef, geographic, nil)
 
 	if err != nil {
 		logrus.Fatalln(err)
@@ -179,22 +177,22 @@ func radialToRelativePoints(radial *archive2.Message31, product string) []*DataP
 }
 
 func relativePointToGeographicPoint(ltpToEcef *proj.PJ, ecefToGeographic *proj.PJ, relativePoint *DataPoint) *DataPoint {
-	ecef_x, ecef_y, ecef_z, _, err := ltpToEcef.Trans(proj.Fwd, relativePoint.U, relativePoint.V, relativePoint.W, 0)
+	ecef, err := ltpToEcef.Forward(proj.NewCoord(relativePoint.U, relativePoint.V, relativePoint.W, 0))
 
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
-	lon, lat, alt, _, err := ecefToGeographic.Trans(proj.Fwd, ecef_x, ecef_y, ecef_z, 0)
+	geo, err := ecefToGeographic.Forward(ecef)
 
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
 	return &DataPoint{
-		U:     lon,
-		V:     lat,
-		W:     alt,
+		U:     geo.X(),
+		V:     geo.Y(),
+		W:     geo.Z(),
 		Value: relativePoint.Value,
 	}
 }
