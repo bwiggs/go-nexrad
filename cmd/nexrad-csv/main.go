@@ -60,7 +60,7 @@ func run(cmd *cobra.Command, args []string) {
 		logrus.Fatalf("invalid product %s", product)
 	}
 
-	f, err := os.Open(inputFile)
+	f, err := os.Open(inputFile) 
 
 	if err != nil {
 		logrus.Error(err)
@@ -150,7 +150,7 @@ func radialToRelativePoints(radial *archive2.Message31, product string) []*DataP
 		theta += 360
 	}
 
-	theta_radians := float64(azimuth * (math.Pi / 180))
+	theta_radians := float64(theta * (math.Pi / 180))
 
 	r := firstGateDist
 
