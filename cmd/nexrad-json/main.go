@@ -15,7 +15,7 @@ import (
 
 var cmd = &cobra.Command{
 	Use:   "nexrad-json [flags] file",
-	Short: "nexrad-json generates products from NEXRAD Level 2 (archive 2) data files.",
+	Short: "nexrad-json generates GeoJSON from NEXRAD Level 2 (archive 2) data files.",
 	Run:   run,
 	Args:  cobra.MinimumNArgs(1),
 }
