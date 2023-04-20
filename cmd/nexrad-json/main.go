@@ -7,14 +7,15 @@ import (
 	"runtime"
 
 	"github.com/bwiggs/go-nexrad/archive2"
+	geojson "github.com/paulmach/go.geojson"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	proj "github.com/twpayne/go-proj/v10"
 )
 
 var cmd = &cobra.Command{
-	Use:   "nexrad-csv [flags] file",
-	Short: "nexrad-csv generates products from NEXRAD Level 2 (archive 2) data files.",
+	Use:   "nexrad-json [flags] file",
+	Short: "nexrad-json generates products from NEXRAD Level 2 (archive 2) data files.",
 	Run:   run,
 	Args:  cobra.MinimumNArgs(1),
 }
@@ -30,7 +31,7 @@ var (
 var validProducts = map[string]struct{}{"ref": {}, "vel": {}, "sw": {}, "rho": {}}
 
 func init() {
-	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "radar.csv", "output file")
+	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "radar.json", "output file")
 	cmd.PersistentFlags().StringVarP(&product, "product", "p", "ref", "product to produce. ex: ref, vel, sw, rho")
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
 	cmd.PersistentFlags().IntVarP(&runners, "threads", "t", runtime.NumCPU(), "threads")
@@ -73,12 +74,12 @@ func run(cmd *cobra.Command, args []string) {
 
 	radials := ar2.ElevationScans[elevation]
 
-	radarRelativePoints := make([]*DataPoint, 0)
+	radarRelativeBins := make([]*Bin, 0)
 
 	for _, radial := range radials {
 		points := radialToRelativePoints(radial, product)
 
-		radarRelativePoints = append(radarRelativePoints, points...)
+		radarRelativeBins = append(radarRelativeBins, points...)
 	}
 
 	radar_lat := radials[0].VolumeData.Lat
@@ -102,12 +103,12 @@ func run(cmd *cobra.Command, args []string) {
 		logrus.Fatalln(err)
 	}
 
-	geographicPoints := make([]*DataPoint, 0)
+	featureCollection := geojson.NewFeatureCollection()
 
-	for _, relativePoint := range radarRelativePoints {
-		geoPoint := relativePointToGeographicPoint(ltpToEcef, ecefToGeographic, relativePoint)
+	for _, relativeBin := range radarRelativeBins {
+		geoBin := relativeBinToGeographicBin(ltpToEcef, ecefToGeographic, relativeBin)
 
-		geographicPoints = append(geographicPoints, geoPoint)
+		featureCollection.AddFeature(geoBin.ToPoly())
 	}
 
 	file, err := os.Create(outputFile)
@@ -118,15 +119,16 @@ func run(cmd *cobra.Command, args []string) {
 
 	defer file.Close()
 
-	// Header
-	file.WriteString("latitude,longitude,value\n")
+	json, err := featureCollection.MarshalJSON()
 
-	for _, geoPoint := range geographicPoints {
-		file.WriteString(geoPoint.ToRow())
+	if err != nil {
+		logrus.Fatalln(err)
 	}
+
+	file.Write(json)
 }
 
-func radialToRelativePoints(radial *archive2.Message31, product string) []*DataPoint {
+func radialToRelativePoints(radial *archive2.Message31, product string) []*Bin {
 	azimuth := radial.Header.AzimuthAngle
 	elevation := radial.Header.ElevationAngle
 
@@ -148,51 +150,86 @@ func radialToRelativePoints(radial *archive2.Message31, product string) []*DataP
 		theta += 360
 	}
 
-	theta_radians := float64(theta * (math.Pi / 180))
+	thetaRadians := float64(theta * (math.Pi / 180))
 
 	r := firstGateDist
 
-	relativePoints := make([]*DataPoint, 0)
+	radarRelativeBins := make([]*Bin, 0)
+
+	halfAzimuthSpacingRadians := radial.Header.AzimuthResolutionSpacing() * (math.Pi / 360)
+
+	sinPhi := math.Sin(phi_radians)
+	cosPhi := math.Cos(phi_radians)
 
 	for _, gate := range *gates {
+		r2 := r + gateIncrement
 
-		if gate == archive2.MomentDataBelowThreshold || gate == archive2.MomentDataFolded {
-			r += gateIncrement
+		if gate == archive2.MomentDataBelowThreshold || gate == archive2.MomentDataFolded || gate < 0 {
+			r = r2
 			continue
 		}
 
-		point := &DataPoint{
-			U:     r * math.Sin(phi_radians) * math.Cos(theta_radians),
-			V:     r * math.Sin(phi_radians) * math.Sin(theta_radians),
-			W:     r * math.Cos(phi_radians),
+		// From radar's point of view:
+		// - bottom left
+		// - bottom right
+		// - top left
+		// - top right
+		point1 := proj.NewCoord(
+			r*sinPhi*math.Cos(thetaRadians+halfAzimuthSpacingRadians),
+			r*sinPhi*math.Sin(thetaRadians+halfAzimuthSpacingRadians),
+			r*cosPhi,
+			0,
+		)
+
+		point2 := proj.NewCoord(
+			r*sinPhi*math.Cos(thetaRadians-halfAzimuthSpacingRadians),
+			r*sinPhi*math.Sin(thetaRadians-halfAzimuthSpacingRadians),
+			r*cosPhi,
+			0,
+		)
+
+		point3 := proj.NewCoord(
+			r2*sinPhi*math.Cos(thetaRadians+halfAzimuthSpacingRadians),
+			r2*sinPhi*math.Sin(thetaRadians+halfAzimuthSpacingRadians),
+			r2*cosPhi,
+			0,
+		)
+
+		point4 := proj.NewCoord(
+			r2*sinPhi*math.Cos(thetaRadians-halfAzimuthSpacingRadians),
+			r2*sinPhi*math.Sin(thetaRadians-halfAzimuthSpacingRadians),
+			r2*cosPhi,
+			0,
+		)
+
+		bin := Bin{
+			A:     point1,
+			B:     point2,
+			C:     point3,
+			D:     point4,
 			Value: gate,
 		}
 
-		relativePoints = append(relativePoints, point)
+		radarRelativeBins = append(radarRelativeBins, &bin)
 
-		r += gateIncrement
+		r = r2
 	}
 
-	return relativePoints
+	return radarRelativeBins
 }
 
-func relativePointToGeographicPoint(ltpToEcef *proj.PJ, ecefToGeographic *proj.PJ, relativePoint *DataPoint) *DataPoint {
-	ecef, err := ltpToEcef.Forward(proj.NewCoord(relativePoint.U, relativePoint.V, relativePoint.W, 0))
+func relativeBinToGeographicBin(ltpToEcef *proj.PJ, ecefToGeographic *proj.PJ, relativeBin *Bin) *Bin {
+	ecef, err := relativeBin.Forward(ltpToEcef)
 
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
-	geo, err := ecefToGeographic.Forward(ecef)
+	geo, err := ecef.Forward(ecefToGeographic)
 
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
-	return &DataPoint{
-		U:     geo.X(),
-		V:     geo.Y(),
-		W:     geo.Z(),
-		Value: relativePoint.Value,
-	}
+	return geo
 }
