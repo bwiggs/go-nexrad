@@ -11,7 +11,7 @@ require (
 	github.com/llgcode/draw2d v0.0.0-20210904075650-80aa0a2a901d
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/paulmach/go.geojson v1.4.0 // indirect
+	github.com/paulmach/go.geojson v1.4.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.4.0
 	github.com/twpayne/go-proj/v10 v10.1.0

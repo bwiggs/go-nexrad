@@ -5,6 +5,8 @@ import (
 	"math"
 	"os"
 	"runtime"
+	"strconv"
+	"sync"
 
 	"github.com/bwiggs/go-nexrad/archive2"
 	geojson "github.com/paulmach/go.geojson"
@@ -21,21 +23,25 @@ var cmd = &cobra.Command{
 }
 
 var (
-	outputFile string
-	logLevel   string
-	product    string
-	elevation  int
-	runners    int
+	outputName   string
+	logLevel     string
+	product      string
+	elevation    int
+	runners      int
+	elevationTil int
+	minimum      float32
 )
 
 var validProducts = map[string]struct{}{"ref": {}, "vel": {}, "sw": {}, "rho": {}}
 
 func init() {
-	cmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "radar.json", "output file")
+	cmd.PersistentFlags().StringVarP(&outputName, "output", "o", "radar", "base name for output files")
 	cmd.PersistentFlags().StringVarP(&product, "product", "p", "ref", "product to produce. ex: ref, vel, sw, rho")
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "log level, debug, info, warn, error")
 	cmd.PersistentFlags().IntVarP(&runners, "threads", "t", runtime.NumCPU(), "threads")
 	cmd.PersistentFlags().IntVarP(&elevation, "elevation", "e", 1, "1-15")
+	cmd.PersistentFlags().Float32VarP(&minimum, "minimum", "m", 0.0, "the minimum value to include in the output")
+	cmd.PersistentFlags().IntVar(&elevationTil, "elevations-til", -1, "output all elevations up to and including")
 }
 
 func main() {
@@ -72,18 +78,59 @@ func run(cmd *cobra.Command, args []string) {
 
 	ar2 := archive2.Extract(f)
 
-	radials := ar2.ElevationScans[elevation]
+	ltpToEcef, ecefToGeographic := makeTransformations(ar2.ElevationScans[1][0])
 
-	radarRelativeBins := make([]*Bin, 0)
+	collections := make(map[int]*geojson.FeatureCollection)
 
-	for _, radial := range radials {
-		points := radialToRelativePoints(radial, product)
+	if elevationTil < 0 {
+		radials := ar2.ElevationScans[elevation]
 
-		radarRelativeBins = append(radarRelativeBins, points...)
+		collections[elevation] = scanToFeatureCollection(&radials, ltpToEcef, ecefToGeographic)
+	} else {
+		var wg sync.WaitGroup
+		for elevation, radials := range ar2.ElevationScans {
+			if elevation > elevationTil {
+				continue
+			}
+
+			wg.Add(1)
+
+			go func(elevation int, radials []*archive2.Message31) {
+				collections[elevation] = scanToFeatureCollection(&radials, ltpToEcef, ecefToGeographic)
+				wg.Done()
+			}(elevation, radials)
+		}
+		wg.Wait()
 	}
 
-	radar_lat := radials[0].VolumeData.Lat
-	radar_lon := radials[0].VolumeData.Long
+	var wg sync.WaitGroup
+	for elevation, collection := range collections {
+		wg.Add(1)
+		go func(elevation int, collection *geojson.FeatureCollection) {
+			file, err := os.Create(outputName + "-" + product + "-elev-" + strconv.Itoa(elevation) + ".json")
+
+			if err != nil {
+				logrus.Fatalln(err)
+			}
+
+			defer file.Close()
+
+			json, err := collection.MarshalJSON()
+
+			if err != nil {
+				logrus.Fatalln(err)
+			}
+
+			file.Write(json)
+			wg.Done()
+		}(elevation, collection)
+	}
+	wg.Wait()
+}
+
+func makeTransformations(msg31 *archive2.Message31) (*proj.PJ, *proj.PJ) {
+	radar_lat := msg31.VolumeData.Lat
+	radar_lon := msg31.VolumeData.Long
 
 	ltp := fmt.Sprintf("+proj=ortho +lat_0=%v +lon_0=%v +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs", radar_lat, radar_lon)
 
@@ -103,6 +150,18 @@ func run(cmd *cobra.Command, args []string) {
 		logrus.Fatalln(err)
 	}
 
+	return ltpToEcef, ecefToGeographic
+}
+
+func scanToFeatureCollection(radials *[]*archive2.Message31, ltpToEcef *proj.PJ, ecefToGeographic *proj.PJ) *geojson.FeatureCollection {
+	radarRelativeBins := make([]*Bin, 0)
+
+	for _, radial := range *radials {
+		points := radialToRelativePoints(radial, product)
+
+		radarRelativeBins = append(radarRelativeBins, points...)
+	}
+
 	featureCollection := geojson.NewFeatureCollection()
 
 	for _, relativeBin := range radarRelativeBins {
@@ -111,21 +170,7 @@ func run(cmd *cobra.Command, args []string) {
 		featureCollection.AddFeature(geoBin.ToPoly())
 	}
 
-	file, err := os.Create(outputFile)
-
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-
-	defer file.Close()
-
-	json, err := featureCollection.MarshalJSON()
-
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-
-	file.Write(json)
+	return featureCollection
 }
 
 func radialToRelativePoints(radial *archive2.Message31, product string) []*Bin {
@@ -164,7 +209,7 @@ func radialToRelativePoints(radial *archive2.Message31, product string) []*Bin {
 	for _, gate := range *gates {
 		r2 := r + gateIncrement
 
-		if gate == archive2.MomentDataBelowThreshold || gate == archive2.MomentDataFolded || gate < 0 {
+		if gate == archive2.MomentDataBelowThreshold || gate == archive2.MomentDataFolded || gate < minimum {
 			r = r2
 			continue
 		}
