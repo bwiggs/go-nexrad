@@ -3,3 +3,4 @@ vendor/
 *.png
 nids/samples
 *.json
+*.prof
