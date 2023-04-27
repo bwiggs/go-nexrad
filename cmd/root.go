@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/bwiggs/go-nexrad/internal/archive2"
+	"github.com/jtleniger/go-nexrad-geojson/internal/archive2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

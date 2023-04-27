@@ -1,13 +1,10 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/bwiggs/go-nexrad/internal/geo"
+	"github.com/jtleniger/go-nexrad-geojson/internal/geo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

@@ -3,7 +3,7 @@ package geo
 import (
 	"math"
 
-	"github.com/bwiggs/go-nexrad/internal/archive2"
+	"github.com/jtleniger/go-nexrad-geojson/internal/archive2"
 	"github.com/sirupsen/logrus"
 	"github.com/twpayne/go-proj/v10"
 )

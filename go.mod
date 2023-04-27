@@ -1,4 +1,4 @@
-module github.com/bwiggs/go-nexrad
+module github.com/jtleniger/go-nexrad-geojson
 
 go 1.12
 

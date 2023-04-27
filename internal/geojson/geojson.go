@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bwiggs/go-nexrad/internal/geo"
+	"github.com/jtleniger/go-nexrad-geojson/internal/geo"
 )
 
 func BinsToString(bins []*geo.Bin) *strings.Builder {

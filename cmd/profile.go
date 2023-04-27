@@ -4,8 +4,8 @@ import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/bwiggs/go-nexrad/internal/geo"
-	"github.com/bwiggs/go-nexrad/internal/geojson"
+	"github.com/jtleniger/go-nexrad-geojson/internal/geo"
+	"github.com/jtleniger/go-nexrad-geojson/internal/geojson"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
