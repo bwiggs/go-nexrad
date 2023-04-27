@@ -4,6 +4,8 @@ import (
 	"os"
 
 	"github.com/jtleniger/go-nexrad-geojson/internal/archive2"
+	"github.com/jtleniger/go-nexrad-geojson/internal/geo"
+	"github.com/jtleniger/go-nexrad-geojson/internal/geojson"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -13,8 +15,8 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "go-nexrad",
-	Short: "Process NEXRAD data.",
+	Use:   "go-nexrad-json [NEXRAD archive file]",
+	Short: "Create GeoJSON from NEXRAD data.",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		lvl, err := logrus.ParseLevel(logLevel)
 
@@ -24,6 +26,8 @@ var rootCmd = &cobra.Command{
 
 		logrus.SetLevel(lvl)
 	},
+	Run:  run,
+	Args: cobra.ExactArgs(1),
 }
 
 func Execute() {
@@ -48,4 +52,26 @@ func readArchive(filename string) *archive2.Archive2 {
 	defer f.Close()
 
 	return archive2.Extract(f)
+}
+
+func run(cmd *cobra.Command, args []string) {
+	archive2 := readArchive(args[0])
+
+	bins := geo.RadarToBins(archive2, &geo.RadarToJSONOptions{
+		Product: "ref",
+		Minimum: 10,
+	})
+
+	o, err := os.Create("test.json")
+	defer func() {
+		o.Close()
+	}()
+
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	b := geojson.BinsToString(bins)
+
+	o.WriteString(b.String())
 }
