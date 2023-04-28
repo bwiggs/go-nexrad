@@ -37,19 +37,19 @@ func (m *Message31) ScaledDataForProduct(product string) (*[]float32, error) {
 	var moment *DataMoment
 
 	switch product {
-	case "ref":
+	case "REF":
 		moment = m.ReflectivityData
-	case "vel":
+	case "VEL":
 		moment = m.VelocityData
-	case "sw":
+	case "SW":
 		moment = m.SwData
-	case "phi":
+	case "PHI":
 		moment = m.PhiData
-	case "rho":
+	case "RHO":
 		moment = m.RhoData
-	case "zdr":
+	case "ZDR":
 		moment = m.ZdrData
-	case "cfp":
+	case "CFP":
 		moment = m.CfpData
 	default:
 		return nil, fmt.Errorf("unexpected product %s", product)
@@ -240,7 +240,7 @@ func msg31(r io.ReadSeeker) *Message31 {
 				m31.ReflectivityData = d
 			case "VEL":
 				m31.VelocityData = d
-			case "SW ":
+			case "SW":
 				m31.SwData = d
 			case "ZDR":
 				m31.ZdrData = d

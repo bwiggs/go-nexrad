@@ -2,6 +2,7 @@ package geo
 
 import (
 	"math"
+	"sync"
 
 	"github.com/jtleniger/go-nexrad-geojson/internal/archive2"
 	"github.com/sirupsen/logrus"
@@ -9,16 +10,37 @@ import (
 )
 
 type RadarToJSONOptions struct {
-	Product string
-	Minimum float32
+	Product    string
+	Minimum    *float32
+	Maximum    *float32
+	Elevations []int
 }
 
-func RadarToBins(archive2 *archive2.Archive2, options *RadarToJSONOptions) []*Bin {
+func RadarToBins(archive2 *archive2.Archive2, options *RadarToJSONOptions) map[int][]*Bin {
 	volumeData := archive2.ElevationScans[1][0].VolumeData
-
 	transforms := createTransforms(volumeData.Lat, volumeData.Lon)
 
-	return georeferenceScan(archive2.ElevationScans[1], transforms, options)
+	georeferencedScans := make(map[int][]*Bin, len(options.Elevations))
+
+	var wg sync.WaitGroup
+
+	for _, elevation := range options.Elevations {
+		if _, ok := archive2.ElevationScans[elevation]; !ok {
+			logrus.Warnf("elevation %v not present", elevation)
+			continue
+		}
+
+		wg.Add(1)
+
+		go func(elevation int, transforms []*proj.PJ, options *RadarToJSONOptions) {
+			georeferencedScans[elevation] = georeferenceScan(archive2.ElevationScans[elevation], transforms, options)
+			wg.Done()
+		}(elevation, transforms, options)
+	}
+
+	wg.Wait()
+
+	return georeferencedScans
 }
 
 func georeferenceScan(scan []*archive2.Message31, transforms []*proj.PJ, options *RadarToJSONOptions) []*Bin {
@@ -71,8 +93,17 @@ func radialToRelativePoints(radial *archive2.Message31, options *RadarToJSONOpti
 	for _, gate := range *gates {
 		r2 := r + gateIncrement
 
-		// TODO: minimum value
-		if gate == archive2.MomentDataBelowThreshold || gate == archive2.MomentDataFolded || gate < options.Minimum {
+		if gate == archive2.MomentDataBelowThreshold || gate == archive2.MomentDataFolded {
+			r = r2
+			continue
+		}
+
+		if options.Minimum != nil && gate < *options.Minimum {
+			r = r2
+			continue
+		}
+
+		if options.Maximum != nil && gate > *options.Maximum {
 			r = r2
 			continue
 		}

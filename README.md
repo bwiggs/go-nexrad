@@ -1,31 +1,35 @@
-# go-nexrad: NEXRAD Data Processing with Go
+# go-nexrad-geojson: NEXRAD to GeoJSON
 
 ![](https://img.shields.io/badge/status-alpha-red.svg?style=flat-square)
-[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/bwiggs/go-nexrad)
-[![Go Report Card](https://goreportcard.com/badge/github.com/bwiggs/go-nexrad?style=flat-square)](https://goreportcard.com/report/github.com/bwiggs/go-nexrad)
-[![Slack](https://img.shields.io/badge/slack-chat-green?logo=slack)](https://gophers.slack.com/archives/C02FMCQS820)
-[![license](https://img.shields.io/github/license/bwiggs/go-nexrad.svg?style=flat-square)](https://raw.githubusercontent.com/bwiggs/go-nexrad/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jtleniger/go-nexrad-geojson?style=flat-square)](https://goreportcard.com/report/github.com/jtleniger/go-nexrad-geojson)
+[![license](https://img.shields.io/github/license/jtleniger/go-nexrad-geojson.svg?style=flat-square)](https://raw.githubusercontent.com/jtleniger/go-nexrad-geojson/master/LICENSE)
 
-Go Tools for processing NEXRAD binary data.
+Create GeoJSON from NEXRAD data.
 
 ## Features
 
-- NEXRAD Level 2 (Archive II Format) Processing
+- Create GeoJSON from NEXRAD Level 2 (Archive II Format)
+	- Output
+		- Polygons for each bin for a given product
+		- Single elevation or range of elevations
 	- Products 
 		- Reflectivity (REF)
 		- Velocity (VEL)
 		- Spectrum Width (SW)
 		- Correlation Coefficient (RHO)
 		- Differential Reflectivity (ZDR)
+		- Differential Phase Shift (PHI)
 
-#### Sample Image
+## Dependencies
 
-Reflectivity Radar for Hurricane Harvey after making landfall from the KCRP (Corpus Christy Radar site).
+- [PROJ](https://proj.org/) version 6 or higher 
+	- On Debian-based systems:
+		- proj-bin
+    	- proj-data
+    	- libproj-dev
+- pbzip2 (optional, increases performace when decompressing bzip2)
 
-![Hurricane Harvey](screenshot.jpg)
-
-
-## Resources
+## Additional Reading
 
 - [NOAA - Introduction to Doppler Radar](http://www.srh.noaa.gov/jetstream/doppler/doppler_intro.html) - Overview of Doppler Radar Technology
 - [WSR-88D Govenment Training Course](http://training.weather.gov/wdtd/courses/rac/intro/rda/index.html) - Overview of the WSR-88D Radar and system components.
