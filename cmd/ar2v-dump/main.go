@@ -18,7 +18,10 @@ func main() {
 		return
 	}
 
-	ar2 := archive2.Extract(f)
+	ar2, err := archive2.Extract(f)
+	if err != nil {
+		logrus.Fatal(err)
+	}
 
 	fmt.Printf("Station: %s\n", ar2.VolumeHeader.ICAO)
 	fmt.Printf("Date: %s\n", ar2.VolumeHeader.Date())

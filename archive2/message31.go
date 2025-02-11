@@ -95,13 +95,16 @@ func (h *Message31Header) AzimuthResolutionSpacing() float64 {
 	return 1
 }
 
-func msg31(r io.ReadSeeker) *Message31 {
+func msg31(r io.ReadSeeker) (*Message31, error) {
 	m31h := Message31Header{}
 
 	// save the position of the first byte so we can easily process data blocks later.
 	startPos, _ := r.Seek(0, io.SeekCurrent)
 
-	binary.Read(r, binary.BigEndian, &m31h)
+	if err := binary.Read(r, binary.BigEndian, &m31h); err != nil {
+		logrus.Errorf(err.Error())
+		return nil, err
+	}
 
 	m31 := Message31{
 		Header: m31h,
@@ -119,7 +122,8 @@ func msg31(r io.ReadSeeker) *Message31 {
 
 	blockPointers := make([]uint32, m31h.DataBlockCount)
 	if err := binary.Read(r, binary.BigEndian, blockPointers); err != nil {
-		logrus.Panic(err.Error())
+		logrus.Errorf(err.Error())
+		return nil, err
 	}
 
 	// check for more DataBlockPointers
@@ -130,12 +134,16 @@ func msg31(r io.ReadSeeker) *Message31 {
 	maxLoops := 20
 	for i := 0; true; i++ {
 		if err := binary.Read(r, binary.BigEndian, &lookahead); err != nil {
-			logrus.Panic(err.Error())
+			logrus.Errorf(err.Error())
+			return nil, err
 		}
 
 		if bytes.Equal(lookahead, hexRVOL) {
 			// backup 4 bytes to keep the block intact
-			r.Seek(-4, io.SeekCurrent)
+			if _, err := r.Seek(-4, io.SeekCurrent); err != nil {
+				logrus.Errorf(err.Error())
+				return nil, err
+			}
 			break
 		}
 
@@ -146,7 +154,8 @@ func msg31(r io.ReadSeeker) *Message31 {
 
 		// prevent infinite loop
 		if i == maxLoops {
-			logrus.Fatal("M31 Header: failed to find the end of the datablock pointers.")
+			logrus.Error("M31 Header: failed to find the end of the datablock pointers.")
+			return nil, fmt.Errorf("m31 header: failed to find the end of the datablock pointers")
 		}
 		i++
 	}
@@ -155,40 +164,47 @@ func msg31(r io.ReadSeeker) *Message31 {
 	for _, bptr := range blockPointers {
 		// logrus.Tracef("ar2: m31: processing datablock %d", i)
 
-		r.Seek(startPos+int64(bptr), io.SeekStart)
+		if _, err := r.Seek(startPos+int64(bptr), io.SeekStart); err != nil {
+			logrus.Errorf(err.Error())
+			return nil, err
+		}
 
 		d := DataBlock{}
 		if err := binary.Read(r, binary.BigEndian, &d); err != nil {
-			logrus.Panic(err.Error())
+			logrus.Errorf(err.Error())
+			return nil, err
 		}
 
 		// rewind from reading the datalblock
-		r.Seek(-4, io.SeekCurrent)
+		if _, err := r.Seek(-4, io.SeekCurrent); err != nil {
+			logrus.Errorf(err.Error())
+			return nil, err
+		}
 
 		blockName := string(d.DataName[:])
 
 		switch blockName {
 		case "VOL":
-			binary.Read(r, binary.BigEndian, &m31.VolumeData)
+			if err := binary.Read(r, binary.BigEndian, &m31.VolumeData); err != nil {
+				logrus.Errorf(err.Error())
+				return nil, err
+			}
 		case "ELV":
-			binary.Read(r, binary.BigEndian, &m31.ElevationData)
+			if err := binary.Read(r, binary.BigEndian, &m31.ElevationData); err != nil {
+				logrus.Errorf(err.Error())
+				return nil, err
+			}
 		case "RAD":
-			binary.Read(r, binary.BigEndian, &m31.RadialData)
-		case "REF":
-			fallthrough
-		case "VEL":
-			fallthrough
-		case "CFP":
-			fallthrough
-		case "SW ":
-			fallthrough
-		case "ZDR":
-			fallthrough
-		case "PHI":
-			fallthrough
-		case "RHO":
+			if err := binary.Read(r, binary.BigEndian, &m31.RadialData); err != nil {
+				logrus.Errorf(err.Error())
+				return nil, err
+			}
+		case "REF", "VEL", "CFP", "SW ", "ZDR", "PHI", "RHO":
 			m := GenericDataMoment{}
-			binary.Read(r, binary.BigEndian, &m)
+			if err := binary.Read(r, binary.BigEndian, &m); err != nil {
+				logrus.Errorf(err.Error())
+				return nil, err
+			}
 
 			// LDM is the amount of space in bytes required for a data moment
 			// array and equals ((NG * DWS) / 8) where NG is the number of gates
@@ -197,7 +213,10 @@ func msg31(r io.ReadSeeker) *Message31 {
 			ldm := m.NumberDataMomentGates * uint16(m.DataWordSize) / 8
 
 			data := make([]byte, ldm)
-			binary.Read(r, binary.BigEndian, data)
+			if err := binary.Read(r, binary.BigEndian, data); err != nil {
+				logrus.Errorf(err.Error())
+				return nil, err
+			}
 
 			d := &DataMoment{
 				GenericDataMoment: m,
@@ -222,8 +241,9 @@ func msg31(r io.ReadSeeker) *Message31 {
 			}
 		default:
 			// preview(r, 256)
-			logrus.Panicf("Data Block - unknown type '%s'", blockName)
+			logrus.Errorf("Data Block - unknown type '%s'", blockName)
+			return nil, fmt.Errorf("data block - unknown type '%s'", blockName)
 		}
 	}
-	return &m31
+	return &m31, nil
 }

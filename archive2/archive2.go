@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"sort"
 	"time"
 
@@ -32,7 +31,7 @@ type Archive2 struct {
 }
 
 // Extract data from a given archive 2 data file.
-func Extract(f io.ReadSeeker) *Archive2 {
+func Extract(f io.ReadSeeker) (*Archive2, error) {
 	ar2ExtractTimeStart := time.Now()
 	defer func() {
 		logrus.Debugf("ar2: done %s", time.Since(ar2ExtractTimeStart))
@@ -47,16 +46,19 @@ func Extract(f io.ReadSeeker) *Archive2 {
 	// older archive2 files are gzipped, check for those and decompress if found
 	if yes, ctype := isCompressed(f); yes {
 		if ctype != "gz" {
-			logrus.Fatalf("unsupported compression %s", ctype)
+			logrus.Errorf("unsupported compression %s", ctype)
+			return nil, fmt.Errorf("unsupported compression %s", ctype)
 		}
 		var gzd *gzip.Reader
 		var err error
 		if gzd, err = gzip.NewReader(f); err != nil {
-			logrus.Fatalf("failed to open gzip file: %s", err)
+			logrus.Errorf("failed to open gzip file: %s", err)
+			return nil, fmt.Errorf("failed to open gzip file: %s", err)
 		}
-		gzb, err := ioutil.ReadAll(gzd)
+		gzb, err := io.ReadAll(gzd)
 		if err != nil {
-			logrus.Fatalf("failed to read gzip file: %s", err)
+			logrus.Errorf("failed to read gzip file: %s", err)
+			return nil, fmt.Errorf("failed to read gzip file: %s", err)
 		}
 		f = bytes.NewReader(gzb)
 	}
@@ -71,7 +73,9 @@ func Extract(f io.ReadSeeker) *Archive2 {
 	// Archive II filename.
 
 	// read in the 24 byte volume header record
-	binary.Read(f, binary.BigEndian, &ar2.VolumeHeader)
+	if err := binary.Read(f, binary.BigEndian, &ar2.VolumeHeader); err != nil {
+		return nil, err
+	}
 
 	logrus.Debug(ar2.VolumeHeader)
 
@@ -92,9 +96,10 @@ func Extract(f io.ReadSeeker) *Archive2 {
 		// read in control word (size) of LDM record
 		if err := binary.Read(f, binary.BigEndian, &ldm.Size); err != nil {
 			if err != io.EOF {
-				logrus.Panic(err.Error())
+				logrus.Errorf(err.Error())
+				return nil, err
 			}
-			return &ar2
+			return &ar2, nil
 		}
 
 		// As the control word contains a negative size under some circumstances,
@@ -104,7 +109,11 @@ func Extract(f io.ReadSeeker) *Archive2 {
 			ldm.Size = -ldm.Size
 		} else if ldm.Size == 0 {
 			// older files don't have LDM records? Backup 4 bytes (int32 for size)
-			f.Seek(-4, io.SeekCurrent)
+			_, err := f.Seek(-4, io.SeekCurrent)
+			if err != nil {
+				logrus.Errorf("failed to seek back 4 bytes: %s", err)
+				return nil, err
+			}
 		}
 
 		logrus.WithFields(logrus.Fields{
@@ -132,13 +141,18 @@ func Extract(f io.ReadSeeker) *Archive2 {
 			// begin until byte 13 (halfword 7 or full word 4). This 12 byte
 			// offset is due to legacy compliance (previously known as the "CTM
 			//header"). See the RDA/RPG ICD for more details (Message Header Data)
-			msgBuf.Seek(LegacyCTMHeaderLen, io.SeekCurrent)
+			_, err := msgBuf.Seek(LegacyCTMHeaderLen, io.SeekCurrent)
+			if err != nil {
+				logrus.Errorf("failed to seek forward CTM header: %s", err)
+				return nil, err
+			}
 
 			msgHeader := MessageHeader{}
 			if err := binary.Read(msgBuf, binary.BigEndian, &msgHeader); err != nil {
 				if err != io.EOF {
 					logrus.Debugf("processed %d messages", numMessages)
-					logrus.Panic(err.Error())
+					logrus.Errorf("failed to read message header: %s", err)
+					return nil, err
 				}
 				break
 			}
@@ -155,18 +169,30 @@ func Extract(f io.ReadSeeker) *Archive2 {
 			switch msgHeader.MessageType {
 			case 2:
 				m2 := Message2{}
-				binary.Read(msgBuf, binary.BigEndian, &m2)
+				if err := binary.Read(msgBuf, binary.BigEndian, &m2); err != nil {
+					logrus.Errorf("failed to read message 2: %s", err)
+					return nil, err
+				}
 				ar2.RadarStatus = &m2
 
 				// move to the end of the message
-				msgBuf.Seek(MessageBodySize-Message2Length, io.SeekCurrent)
+				if _, err := msgBuf.Seek(MessageBodySize-Message2Length, io.SeekCurrent); err != nil {
+					logrus.Errorf("failed to seek forward header message size: %s", err)
+					return nil, err
+				}
 			case 3:
 				m3 := Message3{}
-				binary.Read(msgBuf, binary.BigEndian, &m3)
+				if err := binary.Read(msgBuf, binary.BigEndian, &m3); err != nil {
+					logrus.Errorf("failed to read message 3: %s", err)
+					return nil, err
+				}
 				ar2.RadarPerformance = &m3
 
 				// move to the end of the message
-				msgBuf.Seek(MessageBodySize-Message3Length, io.SeekCurrent)
+				if _, err := msgBuf.Seek(MessageBodySize-Message3Length, io.SeekCurrent); err != nil {
+					logrus.Errorf("failed to seek forward header message size: %s", err)
+					return nil, err
+				}
 			// case 5:
 			// 	m5 := Message5{}
 			// 	binary.Read(msgBuf, binary.BigEndian, &m5.Message5Header)
@@ -184,7 +210,11 @@ func Extract(f io.ReadSeeker) *Archive2 {
 			// 	// move to the end of the message
 			// 	msgBuf.Seek(MessageBodySize-int64(msgHeader.MessageSize), io.SeekCurrent)
 			case 31:
-				m31 := msg31(msgBuf)
+				m31, err := msg31(msgBuf)
+				if err != nil {
+					logrus.Errorf("failed to read message 31: %s", err)
+					return nil, err
+				}
 				// logrus.Trace(m31.Header.String())
 				ar2.ElevationScans[int(m31.Header.ElevationNumber)] = append(ar2.ElevationScans[int(m31.Header.ElevationNumber)], m31)
 			default:
@@ -193,7 +223,8 @@ func Extract(f io.ReadSeeker) *Archive2 {
 				}
 				_, err := msgBuf.Seek(MessageBodySize, io.SeekCurrent)
 				if err != nil {
-					logrus.Panic("failed to seek forward header message size")
+					logrus.Errorf("failed to seek forward header message size")
+					return nil, err
 				}
 			}
 
@@ -201,7 +232,6 @@ func Extract(f io.ReadSeeker) *Archive2 {
 		}
 		logrus.Tracef("ar2: ldm: done: %s messages:%v", time.Since(ldmExtractTimeStart), messageCounts)
 	}
-	return &ar2
 }
 
 func (ar2 *Archive2) String() string {
