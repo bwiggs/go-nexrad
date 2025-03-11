@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"io/ioutil"
 	"math"
 	"os"
 	"runtime"
@@ -130,7 +129,7 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func animate(dir, outdir, prod string) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -155,7 +154,10 @@ func animate(dir, outdir, prod string) {
 					logrus.Error(err)
 					return
 				}
-				ar2 := archive2.Extract(f)
+				ar2, err := archive2.Extract(f)
+				if err != nil {
+					logrus.Fatal(err)
+				}
 				f.Close()
 				render(outf, ar2.ElevationScans[elevation], fmt.Sprintf("%s - %s", ar2.VolumeHeader.ICAO, ar2.VolumeHeader.Date()))
 				bar.Increment()
@@ -185,11 +187,19 @@ func single(in, out, product string) {
 	}
 	defer f.Close()
 
-	ar2 := archive2.Extract(f)
+	ar2, err := archive2.Extract(f)
+	if err != nil {
+		logrus.Fatal(err)
+	}
 	logrus.Debug(ar2)
 
 	label := fmt.Sprintf("%s %f %s VCP:%d %s %s", ar2.VolumeHeader.ICAO, ar2.ElevationScans[2][0].Header.ElevationAngle, strings.ToUpper(product), ar2.RadarStatus.VolumeCoveragePatternNum, ar2.VolumeHeader.FileName(), ar2.VolumeHeader.Date().Format(time.RFC3339))
-	logrus.Info("Generating %s from %s -> %s\n", strings.ToUpper(product), in, out)
+	logrus.Info(fmt.Sprintf("Generating %s from %s -> %s\n", strings.ToUpper(product), in, out))
+	logrus.WithFields(logrus.Fields{
+		"product": strings.ToUpper(product),
+		"file":    in,
+		"output":  out,
+	}).Info("Generating product")
 	render(out, ar2.ElevationScans[elevation], label)
 }
 

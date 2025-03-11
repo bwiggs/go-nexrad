@@ -215,7 +215,10 @@ func main() {
 		return
 	}
 
-	ar2 = archive2.Extract(f)
+	ar2, err = archive2.Extract(f)
+	if err != nil {
+		logrus.Fatal(err)
+	}
 
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
